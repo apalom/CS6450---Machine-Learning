@@ -5,13 +5,9 @@ Created on Thu Sep 10 11:20:09 2020
 @author: Alex
 """
 
-# import libraries
-import pandas as pd
 import numpy as np
 import math
-import networkx as nx
-import matplotlib.pyplot as plt
-from collections import Counter
+import pandas as pd
 
 #%% load training data
 print('--- Experiments Q2b ---')
@@ -28,8 +24,7 @@ Lines = file1.readlines()
 
 maxIx = 119;
 X = pd.DataFrame(np.zeros((len(Lines),maxIx+1)))
-
-# parse libsvm
+  
 r = 0; m = 0;
 for line in Lines: 
     X.iloc[r][0] = int(line[:2]) # instance label     
@@ -43,20 +38,18 @@ for line in Lines:
 
     r += 1
 
-# define training data
 X = X.rename(columns={0: 'Label'})
-# define attributes
-A = list(X.columns)
-# define training labels
 y = X.Label
-S = X
-
 #%%
 '''
 Implement the decision tree data structure and the ID3 algorithm for
 your decision tree.
 https://stackoverflow.com/questions/11479624/is-there-a-way-to-guarantee-hierarchical-output-from-networkx
 '''
+
+import pandas as pd
+import networkx as nx
+import matplotlib.pyplot as plt
 
 # read in training data
 S = pd.read_excel('data/dt_data.xlsx', sheet_name='data')
@@ -125,11 +118,12 @@ def infoGain(S,A):
     return G_all, A_all, A_prob
 
 Gain, A_all, A_prob = infoGain(S,A)
-Gain_X = Gain.copy()
-del Gain_X['Label']
 print(Gain)
 
 #%% id3 build tree
+
+import networkx as nx
+from collections import Counter
 
 # initialize tree structure
 G = nx.DiGraph(); tree = {};
@@ -149,7 +143,7 @@ def id3(S,A,b):
 
         # add subtree
         if b != 'none':
-            tree[b[0]][b[1]] = best
+            tree[b[0]][b[1]] = {best}
             G.add_edge(b[0],best)
             print('Add \|/', b[0],'[', b[1],']')
         
@@ -170,7 +164,7 @@ def id3(S,A,b):
             # if empty subset, then add most common label
             if len(Sv_lbl) == 0:  
                 maj_lbl, _ = Counter(Sv['Label']).most_common()[0] # return majority label in Sv
-                maj_lbl0 = str(v)+' = '+str(maj_lbl)
+                maj_lbl0 = str(v)+' = '+maj_lbl
                 print('  Add <>', maj_lbl,'- for empty subset of [', best,']')
                 G.add_node(maj_lbl0)
                 G.add_edge(best,maj_lbl0)
@@ -179,7 +173,7 @@ def id3(S,A,b):
             # add leaf node
             elif len(Sv_lbl) == 1:    
                 leaf = Sv['Label'].values[0]
-                leaf0 =  str(v)+' = '+str(leaf)
+                leaf0 =  str(v)+' = '+leaf
                 print('  Add <>', best , '[', v, '] =', leaf)                
                 G.add_node(leaf0)
                 G.add_edge(best,leaf0)        
@@ -199,48 +193,82 @@ def id3(S,A,b):
     
     return G, tree
 
-#A = list(S.columns)[:-1]
-A = list(S.columns)[1:]
+A = list(S.columns)[0:-1]
 G, tree = id3(S,A,'none')
-
 print('\n',tree)
-print('Root Node:', max(Gain_X,key=Gain_X.get))
 
 pos = nx.shell_layout(G)
 nx.draw(G, pos, with_labels=True, arrows=True, node_size=1200, node_color='white',
         font_size=14, font_family='Times New Roman', font_color='k')
 
-#%% data evaluation
 
-roots = pd.DataFrame.from_dict(Gain_X,orient='index')
-roots = roots[0].rename('Entropy')
+#%% ID3 ref
 
-roots = roots.sort_values(ascending = False)
-root0 = roots.index[0]
 
-lbl_tree = {}; accurate = 0; maxDepth = 0;
-# traverse tree classifier
-for idx, x in X.iterrows():
-    
-    next_leaf = root0; depth = 0;
-    while type(next_leaf) != np.float64:        
-        split_val = x[next_leaf]   
-        next_leaf = tree[next_leaf][split_val]
-        depth += 1
+
+#%% define ID3 information gain
+
+def infoGain(S):
+    A = [] # attribute probabilities
+    A_names = {}; # attribute names
+    Sv = [] # subset sizes
+    X = S.drop(columns=['Label']); # training attributes
+    y = S['Label']; # training labels
+    for a in X.columns:
+        V = list(set(X[a].values)) # possible values in attribute
+        X_a = X[a] # feature column    
+        a0 = []; s0 = []
+        for v in V:
+            X_av = X_a[X_a==v]            
+            y_av = y.iloc[list(X_av.index)]      
+            y_av_lbl = list(set(y_av))
+            s0.append(len(y_av)); # Sv = len of subset
+            a1 = [];
+            for lbl in y_av_lbl:            
+                a1.append(list(y_av.values).count(lbl)/(len(y_av))) # probabilty of Yes label
+                A_names[a,v,lbl] = [a1, len(y_av)]
+            
+            a0.append(list(a1))
         
-    lbl_tree[idx] = next_leaf
-    lbl_X = X.Label.loc[idx]
-    accurate += 1 if next_leaf == lbl_X else 0
-    maxDepth = max(maxDepth,depth)
+        Sv.append(s0)
+        A.append(a0)
     
-print('Training accuracy = {:.3f}'.format(accurate/len(X)))  
-print('Max tree depth = {}'.format(maxDepth))  
+    # calculate information gain by entropy
+    k = 0; Gain = {}
+    H = entropy(labelP(y))
+    for att in A:
+        I = 0;     
+        for i in range(len(att)):            
+            I += (Sv[k][i]/len(S)) * entropy(att[i]) #id3 update   
+        Gain[Attributes[k]] = (H - I) # information gain
+        
+        #print(Attributes[k],': Info Gain = {:.4f}'.format((H - I)))
+        k += 1;
     
-#%%
-def traverse_tree(tree,root0,):
+    A_all = {}
+    for i in range(len(A)):
+        A_all[Attributes[i]] = A[i]
     
-    return
-    
+    return Gain, A_all, Sv
+
+Attributes = A;
+Gain, A_all, Sv0 = infoGain(S)
+print(Gain)
+
+
+#%% draw graph    
+#https://stackoverflow.com/questions/11479624/is-there-a-way-to-guarantee-hierarchical-output-from-networkx
+import networkx as nx
+import matplotlib as plt
+
+plt.style.use('ggplot')
+
+tree={}; tree[0]={1,2}; tree[1]={3,4,5}
+G = nx.DiGraph(tree)
+pos = nx.spring_layout(G)
+nx.draw(G, pos, with_labels=True, arrows=True, node_size=500,
+        font_size=12, font_family='Times New Roman', font_color='w')
+
 #%% cross-validation
 '''
 The depth of a tree is a hyper-parameter to the DT algorithm that reduces

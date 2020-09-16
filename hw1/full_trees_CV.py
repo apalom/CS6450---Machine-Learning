@@ -73,16 +73,13 @@ def labelP(y):
         p.append(list(y.values).count(lbl)/len(y)) # probabilty of Yes label
     return p
 
-p = labelP(y)
-
 # define entropy
 def entropy(p):    
-    H = 0
+    H = 0    
     for p_lbl in p:                
         H += -p_lbl * math.log2(p_lbl)
+        
     return(H)
-
-print('Entropy: {:.4f}'.format(entropy(p)))
 
 #%% define information gain
 
@@ -123,10 +120,6 @@ def infoGain(S,A):
             
     return G_all, A_all, A_prob
 
-Gain, A_all, A_prob = infoGain(S,A)
-Gain_X = Gain.copy()
-del Gain_X['Label']
-print(Gain)
 
 #%% id3 build tree
 
@@ -157,11 +150,11 @@ def id3(S,A,b):
         if b != 'none':
             tree[b[0]][b[1]] = best
             G.add_edge(b[0],best)
-            print('Add \|/', b[0],'[', b[1],']')
+            #print('Add \|/', b[0],'[', b[1],']')
         
         # add root node
         G.add_node(best)        
-        print('Root:', best)
+        #print('Root:', best)
         tree[best] = {}
         
         # for each possible value v in attribute
@@ -170,14 +163,14 @@ def id3(S,A,b):
             # create subset of examples in S with A = v
             Sv = S[S[best] == v]
             Sv_lbl = list(set(Sv.Label))
-            print('  Add /', best ,'[', v, ']')
+            #print('  Add /', best ,'[', v, ']')
             tree[best][v] = {}
             
             # if empty subset, then add most common label
             if len(Sv_lbl) == 0:  
                 maj_lbl, _ = Counter(Sv['Label']).most_common()[0] # return majority label in Sv
                 maj_lbl0 = str(v)+' = '+str(maj_lbl)
-                print('  Add <>', maj_lbl,'- for empty subset of [', best,']')
+                #print('  Add <>', maj_lbl,'- for empty subset of [', best,']')
                 G.add_node(maj_lbl0)
                 G.add_edge(best,maj_lbl0)
                 tree[best][v] = maj_lbl                
@@ -186,7 +179,7 @@ def id3(S,A,b):
             elif len(Sv_lbl) == 1:    
                 leaf = Sv['Label'].values[0]
                 leaf0 =  str(v)+' = '+str(leaf)
-                print('  Add <>', best , '[', v, '] =', leaf)                
+                #print('  Add <>', best , '[', v, '] =', leaf)                
                 G.add_node(leaf0)
                 G.add_edge(best,leaf0)        
                 tree[best][v] = leaf                
@@ -200,23 +193,14 @@ def id3(S,A,b):
                 # branch connecting current root to next root                 
                 b = [best,v]    
                 # recurse subtree
-                print('--->')
+                #print('--->')
                 id3(Sv, Anew, b)
     
+    root0 = max(Gain,key=Gain.get);
+    #print('Root node:', root0)
+    #print('Root node information gain: {:.3f}'.format(Gain[root0]))
+    
     return G, tree
-
-#A = list(S.columns)[:-1]
-A = list(S.columns)[1:]
-G, tree = id3(S,A,'none')
-
-print('\n',tree)
-root0 = max(Gain_X,key=Gain_X.get);
-print('Root node:', root0)
-print('Root node information gain: {:.3f}'.format(Gain_X[root0]))
-
-pos = nx.shell_layout(G)
-nx.draw(G, pos, with_labels=True, arrows=True, node_size=1200, node_color='white',
-        font_size=14, font_family='Times New Roman', font_color='k')
 
 #%% data evaluation
 
@@ -238,46 +222,62 @@ def dt_class(X,root0,tree):
             next_leaf = tree[next_leaf][split_val]
             depth += 1
             
+            if depth >= 3:
+                next_leaf = split_val
+            
         lbl_tree[idx] = next_leaf
         lbl_X = X.Label.loc[idx]
         accurate += 1 if next_leaf == lbl_X else 0
         maxDepth = max(maxDepth,depth)
-        
-    print('Classification error = {:.3f}'.format(1-accurate/len(X)))  
+    
+    err = 1-accurate/len(X)
+    print('Classification error = {:.3f}'.format(err))  
     print('Max tree depth = {}'.format(maxDepth))  
 
-    return lbl_X
-
-print('-- Training --')
-lbl_Xtrn = dt_class(trn_X,root0,tree)
-print('\n-- Testing--')
-lbl_Xtest = dt_class(tst_X,root0,tree)
+    return lbl_X, err, maxDepth
     
 #%% cross-validation
 '''
 For this problem we will implement k-folds cross-validation.
 '''
 
+results = {}
 for fold in range(1,6):
+
+    results[fold] = {}
     
     print('+++ Data Collection -', fold,' +++')
-    X = D[fold]['X'] 
-    y = D[fold]['y'] 
-    S = D[fold]['S'] 
-    A = D[fold]['A'] 
+    tst_X = D[fold]['X'] 
+    tst_y = D[fold]['y'] 
+    tst_S = D[fold]['S']     
+    A = D[fold]['A']
     
-    p = labelP(y)
+    # create list of all other folds for training        
+    other_folds = list(range(1,6))  
+    del other_folds[fold-1]
+    
+    trn_X = D[other_folds[0]]['X']     
+    trn_y = D[other_folds[0]]['y']   
+    trn_S = D[other_folds[0]]['S']       
+    del other_folds[0]
+    
+    for f in other_folds:
+        trn_X = trn_X.append(D[f]['X'], ignore_index=True)
+        trn_y = trn_y.append(D[f]['y'], ignore_index=True)
+        trn_S = trn_S.append(D[f]['S'], ignore_index=True)
+        
+    p = labelP(trn_y)
     print('Label propoerties:', p)
     print('Entropy: {:.4f}'.format(entropy(p)))
 
     print('+++ Calculate Gain -', fold,' +++')
-    Gain, A_all, A_prob = infoGain(S,A)
+    Gain, A_all, A_prob = infoGain(trn_S,A)
     Gain_X = Gain.copy()
     del Gain_X['Label']
     
     print('+++ Build Tree -', fold,' +++')
-    A = list(S.columns)[1:]
-    G, tree = id3(S,A,'none')
+    A = list(trn_S.columns)[1:]
+    G, tree = id3(trn_S,A,'none')
     
     print('\n',tree)
     root0 = max(Gain_X,key=Gain_X.get);
@@ -285,11 +285,19 @@ for fold in range(1,6):
     print('Root node information gain: {:.3f}'.format(Gain_X[root0]))
     
     print('+++ Training -', fold,' +++')
-    lbl_Xtrn = dt_class(trn_X,root0,tree)
+    lbl_Xtrn, train_err, maxDepth = dt_class(trn_X,root0,tree)
     print('\n-- Testing--')
-    lbl_Xtest = dt_class(tst_X,root0,tree)
+    lbl_Xtest, test_err, _ = dt_class(tst_X,root0,tree)
 
+    results[fold]['entropy'] = entropy(p)
+    results[fold]['root'] = root0
+    results[fold]['root_I'] = Gain_X[root0]
+    results[fold]['maxDepth'] = maxDepth   
+    results[fold]['train_err'] = train_err
+    results[fold]['test_err'] = test_err
 
+print('\nMax depth = 3')
+print(results)
 
 
 

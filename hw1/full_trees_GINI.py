@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from collections import Counter
 
 #%% load training data
-print('--- Implementation - Full Trees by Entropy ---')
+print('--- Implementation - Full Trees by GINI ---')
 
 '''
 Using Adult data set from UCI ML repo (file a1a.train). 14 features: 6 continuous,
@@ -83,16 +83,19 @@ def labelP(y):
         p.append(list(y.values).count(lbl)/len(y)) # probabilty of Yes label
     return p
 
-p = labelP(y)
+p = labelP(trn_y)
+print('Label probabilities: ',np.round(p,3))
 
 # define entropy
-def entropy(p):    
-    H = 0
-    for p_lbl in p:                
-        H += -p_lbl * math.log2(p_lbl)
-    return(H)
+def GINIp(p):    
+    #% calculate information gain by GINI
+    Hg = 0
+    for p_lbl in p:        
+        Hg += p_lbl * (1 - p_lbl)
+        
+    return(Hg)
 
-print('Label entropy: {:.4f}'.format(entropy(p)))
+print('Label entropy by GINI: {:.4f}'.format(GINIp(p)))
 
 #%% define information gain
 
@@ -100,7 +103,7 @@ def infoGain(S,A):
     A_prob = [] # attribute probabilities
     A_names = {}; # attribute names   
     y = S['Label']; # get data labels
-    H = entropy(labelP(y)) # calculate entropy
+    H = GINIp(labelP(y)) # calculate entropy
     ss_v = [];
     for a in A:        
         V = list(set(S[a].values)) # possible values in attribute
@@ -123,20 +126,20 @@ def infoGain(S,A):
         
     i = 0; A_all = {}; G_all = {};    
     for att in A_prob:        
-        I = 0;     
-        for k in range(len(att)):                        
-            I += (ss_v[i][k]/len(S)) * entropy(att[k]) #id3 update                       
+        Gg = 0;     
+        for k in range(len(att)):               
+            Gg += (ss_v[i][k]/len(S)) * (att[k][0]*(1-att[k][0])) #GINI update                       
         
         A_all[A[i]] = A_prob[i] # store all A probs
-        G_all[A[i]] = (H - I) # information gain      
+        G_all[A[i]] = (H - Gg) # information gain      
         i += 1;
             
     return G_all, A_all, A_prob
 
-Gain, A_all, A_prob = infoGain(S,A)
+Gain, A_all, A_prob = infoGain(trn_S,trn_A)
 Gain_X = Gain.copy()
 del Gain_X['Label']
-print('Gain by entropy:')
+print('Gain by GINI:')
 print(Gain)
 
 #%% id3 build tree
@@ -162,6 +165,9 @@ def id3(S,A,b):
     else:
         # return information gain among attributes in A and add 'Label' for InfoGain function        
         Gain, _, _ = infoGain(S,A) 
+        if len(Gain) == 0:
+            print('** S:\n',S)
+        
         best = max(Gain,key=Gain.get) # identify best attribute
 
         # add subtree
@@ -217,8 +223,8 @@ def id3(S,A,b):
     return G, tree
 
 #A = list(S.columns)[:-1]
-A = list(S.columns)[1:]
-G, tree = id3(S,A,'none')
+A = list(trn_S.columns)[1:]
+G, tree = id3(trn_S,A,'none')
 
 print('\n',tree)
 root0 = max(Gain_X,key=Gain_X.get);
@@ -263,37 +269,4 @@ print('-- Training --')
 lbl_Xtrn = dt_class(trn_X,root0,tree)
 print('\n-- Testing--')
 lbl_Xtest = dt_class(tst_X,root0,tree)
-
-#%% Restaurant data
-
-# read in training data
-S = pd.read_excel('data/dt_data.xlsx', sheet_name='data')
-
-y = S['Label']; # assign labels
-X = S.drop(columns=['Label']); # drop uneccessary columns
-A = list(X.columns)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  

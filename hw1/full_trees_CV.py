@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from collections import Counter
 
 #%% load training data
-print('--- Implementation - Full Trees by Entropy ---')
+print('--- Implementation - Full Trees by GINI ---')
 
 '''
 Using Adult data set from UCI ML repo (file a1a.train). 14 features: 6 continuous,
@@ -25,10 +25,10 @@ m categories are converted to m binary features.
 # Using readlines() 
 def readData():
     D = {}; 
-    for dataset in ['train', 'test']:
-        D[dataset] = {}
+    for fold in range(1,6):
+        D[fold] = {}
         
-        file1 = open('data/a1a.'+dataset, 'r') 
+        file1 = open('data/CVfolds/fold'+str(fold), 'r') 
         Lines = file1.readlines() 
         
         maxIx = 119;
@@ -46,7 +46,7 @@ def readData():
                 X.iloc[r][ix+1] = 1        
         
             r += 1
-            print(dataset, r)
+            print('fold:',fold, '| row >', r)
             
         # define training data
         X = X.rename(columns={0: 'Label'})
@@ -56,24 +56,14 @@ def readData():
         y = X.Label
         S = X
         
-        D[dataset]['X'] = X
-        D[dataset]['y'] = y
-        D[dataset]['S'] = S
-        D[dataset]['A'] = A
+        D[fold]['X'] = X
+        D[fold]['y'] = y
+        D[fold]['S'] = S
+        D[fold]['A'] = A
             
     return D
 
 D = readData()
-
-trn_X = D['train']['X']
-trn_y = D['train']['y']
-trn_S = D['train']['S']
-trn_A = D['train']['A']
-
-tst_X = D['test']['X']
-tst_y = D['test']['y']
-tst_S = D['test']['S']
-tst_A = D['test']['A']
 
 #%% label probabilities
 
@@ -92,7 +82,7 @@ def entropy(p):
         H += -p_lbl * math.log2(p_lbl)
     return(H)
 
-print('Label entropy: {:.4f}'.format(entropy(p)))
+print('Entropy: {:.4f}'.format(entropy(p)))
 
 #%% define information gain
 
@@ -124,7 +114,7 @@ def infoGain(S,A):
     i = 0; A_all = {}; G_all = {};    
     for att in A_prob:        
         I = 0;     
-        for k in range(len(att)):                        
+        for k in range(len(att)):                          
             I += (ss_v[i][k]/len(S)) * entropy(att[k]) #id3 update                       
         
         A_all[A[i]] = A_prob[i] # store all A probs
@@ -136,7 +126,6 @@ def infoGain(S,A):
 Gain, A_all, A_prob = infoGain(S,A)
 Gain_X = Gain.copy()
 del Gain_X['Label']
-print('Gain by entropy:')
 print(Gain)
 
 #%% id3 build tree
@@ -263,20 +252,42 @@ print('-- Training --')
 lbl_Xtrn = dt_class(trn_X,root0,tree)
 print('\n-- Testing--')
 lbl_Xtest = dt_class(tst_X,root0,tree)
+    
+#%% cross-validation
+'''
+For this problem we will implement k-folds cross-validation.
+'''
 
-#%% Restaurant data
+for fold in range(1,6):
+    
+    print('+++ Data Collection -', fold,' +++')
+    X = D[fold]['X'] 
+    y = D[fold]['y'] 
+    S = D[fold]['S'] 
+    A = D[fold]['A'] 
+    
+    p = labelP(y)
+    print('Label propoerties:', p)
+    print('Entropy: {:.4f}'.format(entropy(p)))
 
-# read in training data
-S = pd.read_excel('data/dt_data.xlsx', sheet_name='data')
-
-y = S['Label']; # assign labels
-X = S.drop(columns=['Label']); # drop uneccessary columns
-A = list(X.columns)
-
-
-
-
-
+    print('+++ Calculate Gain -', fold,' +++')
+    Gain, A_all, A_prob = infoGain(S,A)
+    Gain_X = Gain.copy()
+    del Gain_X['Label']
+    
+    print('+++ Build Tree -', fold,' +++')
+    A = list(S.columns)[1:]
+    G, tree = id3(S,A,'none')
+    
+    print('\n',tree)
+    root0 = max(Gain_X,key=Gain_X.get);
+    print('Root node:', root0)
+    print('Root node information gain: {:.3f}'.format(Gain_X[root0]))
+    
+    print('+++ Training -', fold,' +++')
+    lbl_Xtrn = dt_class(trn_X,root0,tree)
+    print('\n-- Testing--')
+    lbl_Xtest = dt_class(tst_X,root0,tree)
 
 
 

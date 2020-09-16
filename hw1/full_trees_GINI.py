@@ -46,7 +46,7 @@ def readData():
                 X.iloc[r][ix+1] = 1        
         
             r += 1
-            print(dataset, r)
+            #print(dataset, r)
             
         # define training data
         X = X.rename(columns={0: 'Label'})
@@ -81,10 +81,11 @@ def labelP(y):
     labels = list(set(list(y.values))); p = [];
     for lbl in labels:
         p.append(list(y.values).count(lbl)/len(y)) # probabilty of Yes label
+    
+    #print('Label probabilities: ',np.round(p,3))
     return p
 
 p = labelP(trn_y)
-print('Label probabilities: ',np.round(p,3))
 
 # define entropy
 def GINIp(p):    
@@ -92,10 +93,10 @@ def GINIp(p):
     Hg = 0
     for p_lbl in p:        
         Hg += p_lbl * (1 - p_lbl)
-        
-    return(Hg)
-
-print('Label entropy by GINI: {:.4f}'.format(GINIp(p)))
+    
+    #print('Label entropy by GINI: {:.4f}'.format(Hg))
+    
+    return Hg
 
 #%% define information gain
 
@@ -139,8 +140,8 @@ def infoGain(S,A):
 Gain, A_all, A_prob = infoGain(trn_S,trn_A)
 Gain_X = Gain.copy()
 del Gain_X['Label']
-print('Gain by GINI:')
-print(Gain)
+# print('Gain by GINI:')
+# print(Gain)
 
 #%% id3 build tree
 
@@ -165,8 +166,8 @@ def id3(S,A,b):
     else:
         # return information gain among attributes in A and add 'Label' for InfoGain function        
         Gain, _, _ = infoGain(S,A) 
-        if len(Gain) == 0:
-            print('** S:\n',S)
+        # if len(Gain) == 0:
+        #     print('** S:\n',S)
         
         best = max(Gain,key=Gain.get) # identify best attribute
 
@@ -174,11 +175,11 @@ def id3(S,A,b):
         if b != 'none':
             tree[b[0]][b[1]] = best
             G.add_edge(b[0],best)
-            print('Add \|/', b[0],'[', b[1],']')
+            #print('Add \|/', b[0],'[', b[1],']')
         
         # add root node
         G.add_node(best)        
-        print('Root:', best)
+        #print('Root:', best)
         tree[best] = {}
         
         # for each possible value v in attribute
@@ -187,14 +188,14 @@ def id3(S,A,b):
             # create subset of examples in S with A = v
             Sv = S[S[best] == v]
             Sv_lbl = list(set(Sv.Label))
-            print('  Add /', best ,'[', v, ']')
+            #print('  Add /', best ,'[', v, ']')
             tree[best][v] = {}
             
             # if empty subset, then add most common label
             if len(Sv_lbl) == 0:  
                 maj_lbl, _ = Counter(Sv['Label']).most_common()[0] # return majority label in Sv
                 maj_lbl0 = str(v)+' = '+str(maj_lbl)
-                print('  Add <>', maj_lbl,'- for empty subset of [', best,']')
+                #print('  Add <>', maj_lbl,'- for empty subset of [', best,']')
                 G.add_node(maj_lbl0)
                 G.add_edge(best,maj_lbl0)
                 tree[best][v] = maj_lbl                
@@ -203,7 +204,7 @@ def id3(S,A,b):
             elif len(Sv_lbl) == 1:    
                 leaf = Sv['Label'].values[0]
                 leaf0 =  str(v)+' = '+str(leaf)
-                print('  Add <>', best , '[', v, '] =', leaf)                
+                #print('  Add <>', best , '[', v, '] =', leaf)                
                 G.add_node(leaf0)
                 G.add_edge(best,leaf0)        
                 tree[best][v] = leaf                
@@ -217,7 +218,7 @@ def id3(S,A,b):
                 # branch connecting current root to next root                 
                 b = [best,v]    
                 # recurse subtree
-                print('--->')
+                #print('--->')
                 id3(Sv, Anew, b)
     
     return G, tree
@@ -226,7 +227,7 @@ def id3(S,A,b):
 A = list(trn_S.columns)[1:]
 G, tree = id3(trn_S,A,'none')
 
-print('\n',tree)
+#print('\n',tree)
 root0 = max(Gain_X,key=Gain_X.get);
 print('Root node:', root0)
 print('Root node information gain: {:.3f}'.format(Gain_X[root0]))
@@ -265,7 +266,7 @@ def dt_class(X,root0,tree):
 
     return lbl_X
 
-print('-- Training --')
+print('\n-- Training --')
 lbl_Xtrn = dt_class(trn_X,root0,tree)
 print('\n-- Testing--')
 lbl_Xtest = dt_class(tst_X,root0,tree)

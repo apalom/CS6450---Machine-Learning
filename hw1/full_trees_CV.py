@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from collections import Counter
 
 #%% load training data
-print('--- Implementation - Full Trees by GINI ---')
+print('Implementation - Full Trees with Cross Validation')
 
 '''
 Using Adult data set from UCI ML repo (file a1a.train). 14 features: 6 continuous,
@@ -46,7 +46,7 @@ def readData():
                 X.iloc[r][ix+1] = 1        
         
             r += 1
-            print('fold:',fold, '| row >', r)
+            #print('fold:',fold, '| row >', r)
             
         # define training data
         X = X.rename(columns={0: 'Label'})
@@ -120,7 +120,6 @@ def infoGain(S,A):
             
     return G_all, A_all, A_prob
 
-
 #%% id3 build tree
 
 '''
@@ -130,7 +129,7 @@ https://stackoverflow.com/questions/11479624/is-there-a-way-to-guarantee-hierarc
 '''
 
 # initialize tree structure
-print('Training classifier')
+print('--- Training classifier ---')
 G = nx.DiGraph(); tree = {};
 def id3(S,A,b):
     
@@ -204,13 +203,6 @@ def id3(S,A,b):
 
 #%% data evaluation
 
-# order root value by entropy gain
-roots = pd.DataFrame.from_dict(Gain_X,orient='index')
-roots = roots[0].rename('Entropy')
-
-roots = roots.sort_values(ascending = False)
-root0 = roots.index[0]
-
 def dt_class(X,root0,tree):
     lbl_tree = {}; accurate = 0; maxDepth = 0;
     # traverse tree classifier
@@ -246,7 +238,7 @@ for fold in range(1,6):
 
     results[fold] = {}
     
-    print('+++ Data Collection -', fold,' +++')
+    print('\n+++ Data Collection -', fold,' +++')
     tst_X = D[fold]['X'] 
     tst_y = D[fold]['y'] 
     tst_S = D[fold]['S']     
@@ -267,39 +259,45 @@ for fold in range(1,6):
         trn_S = trn_S.append(D[f]['S'], ignore_index=True)
         
     p = labelP(trn_y)
-    print('Label propoerties:', p)
+    print('Label probabilities:', p)
     print('Entropy: {:.4f}'.format(entropy(p)))
 
     print('+++ Calculate Gain -', fold,' +++')
     Gain, A_all, A_prob = infoGain(trn_S,A)
-    Gain_X = Gain.copy()
-    del Gain_X['Label']
-    
+    del Gain['Label']
+    #Gain = Gain.copy()
+    #del Gain_X['Label']
+           
     print('+++ Build Tree -', fold,' +++')
     A = list(trn_S.columns)[1:]
     G, tree = id3(trn_S,A,'none')
     
-    print('\n',tree)
-    root0 = max(Gain_X,key=Gain_X.get);
+    #print('\n',tree)
+    root0 = max(Gain,key=Gain.get);
     print('Root node:', root0)
-    print('Root node information gain: {:.3f}'.format(Gain_X[root0]))
+    print('Root node information gain: {:.3f}'.format(Gain[root0]))
     
     print('+++ Training -', fold,' +++')
     lbl_Xtrn, train_err, maxDepth = dt_class(trn_X,root0,tree)
-    print('\n-- Testing--')
+    print('\n-- Testing -', fold,' +++')
     lbl_Xtest, test_err, _ = dt_class(tst_X,root0,tree)
 
     results[fold]['entropy'] = entropy(p)
     results[fold]['root'] = root0
-    results[fold]['root_I'] = Gain_X[root0]
+    results[fold]['root_I'] = Gain[root0]
     results[fold]['maxDepth'] = maxDepth   
     results[fold]['train_err'] = train_err
     results[fold]['test_err'] = test_err
 
-print('\nMax depth = 3')
-print(results)
+#print('\nMax depth = 3')
+#print(results)
 
+# order root value by entropy gain
+# roots = pd.DataFrame.from_dict(Gain,orient='index')
+# roots = roots[0].rename('Entropy')
 
+# roots = roots.sort_values(ascending = False)
+# root0 = roots.index[0]
 
 
 

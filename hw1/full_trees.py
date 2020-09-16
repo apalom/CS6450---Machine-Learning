@@ -46,7 +46,7 @@ def readData():
                 X.iloc[r][ix+1] = 1        
         
             r += 1
-            print(dataset, r)
+            #print(dataset, r)
             
         # define training data
         X = X.rename(columns={0: 'Label'})
@@ -83,7 +83,7 @@ def labelP(y):
         p.append(list(y.values).count(lbl)/len(y)) # probabilty of Yes label
     return p
 
-p = labelP(y)
+p = labelP(trn_y)
 
 # define entropy
 def entropy(p):    
@@ -133,11 +133,10 @@ def infoGain(S,A):
             
     return G_all, A_all, A_prob
 
-Gain, A_all, A_prob = infoGain(S,A)
-Gain_X = Gain.copy()
-del Gain_X['Label']
-print('Gain by entropy:')
-print(Gain)
+A = list(trn_S.columns)[1:]
+Gain, A_all, A_prob = infoGain(trn_S,A)
+#print('Gain by entropy:')
+#print(Gain)
 
 #%% id3 build tree
 
@@ -217,13 +216,13 @@ def id3(S,A,b):
     return G, tree
 
 #A = list(S.columns)[:-1]
-A = list(S.columns)[1:]
-G, tree = id3(S,A,'none')
+A = list(trn_S.columns)[1:]
+G, tree = id3(trn_S,A,'none')
 
 print('\n',tree)
-root0 = max(Gain_X,key=Gain_X.get);
+root0 = max(Gain,key=Gain.get);
 print('Root node:', root0)
-print('Root node information gain: {:.3f}'.format(Gain_X[root0]))
+print('Root node information gain: {:.3f}'.format(Gain[root0]))
 
 pos = nx.shell_layout(G)
 nx.draw(G, pos, with_labels=True, arrows=True, node_size=1200, node_color='white',
@@ -232,7 +231,7 @@ nx.draw(G, pos, with_labels=True, arrows=True, node_size=1200, node_color='white
 #%% data evaluation
 
 # order root value by entropy gain
-roots = pd.DataFrame.from_dict(Gain_X,orient='index')
+roots = pd.DataFrame.from_dict(Gain,orient='index')
 roots = roots[0].rename('Entropy')
 
 roots = roots.sort_values(ascending = False)
@@ -266,12 +265,12 @@ lbl_Xtest = dt_class(tst_X,root0,tree)
 
 #%% Restaurant data
 
-# read in training data
-S = pd.read_excel('data/dt_data.xlsx', sheet_name='data')
+# # read in training data
+# S = pd.read_excel('data/dt_data.xlsx', sheet_name='data')
 
-y = S['Label']; # assign labels
-X = S.drop(columns=['Label']); # drop uneccessary columns
-A = list(X.columns)
+# y = S['Label']; # assign labels
+# X = S.drop(columns=['Label']); # drop uneccessary columns
+# A = list(X.columns)
 
 
 

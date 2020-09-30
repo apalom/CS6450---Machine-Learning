@@ -26,15 +26,14 @@ def pred_acc(variant,data,w,b):
         if yi_p[-1] == yi:
             acc_cnt += 1;
            
-    acc = acc_cnt/len(data)    
-    
+    acc = acc_cnt/len(data)        
     #print('- Pred accuracy: {:.3f}'.format(acc)) 
     
     return acc
 
 #%% load data
 
-def load_demoData(path_to_data):
+def load_trainData(path_to_data):
     print('====> Load Data @', path_to_data)
     
     data = pd.read_csv(path_to_data)
@@ -52,6 +51,8 @@ def perc_std(data,w,b,r,T):
     #print('\nBatch Perceptron - Standard:')  
     
     wT = w.transpose(); # initialize values
+    acc0 = 0 # initialize accuracy baseline
+    lc = np.zeros((T)) # learning curve
     for ep in range(T):   
         #print('.', end=" ")
         data = data.sample(frac=1).reset_index(drop=True)
@@ -64,10 +65,18 @@ def perc_std(data,w,b,r,T):
                 w += r * yi * xi # update weight matrix
                 b += r * yi # update bias term
                 wT = w.transpose()
+                
+        # store best accuracy from epochs        
+        epAcc = pred_acc('Standard',data,w,b) 
+        lc[ep] = epAcc;
+        if epAcc > acc0: 
+            best_epAcc = [ep, epAcc];
+            w_best = w; b_best = b;
+            acc0 = epAcc;
     
     #print('\n- Learning rate:', r)    
     #print('\nBatch Perceptron - Standard:', r) 
-    return w, b
+    return w, b, best_epAcc, lc, w_best, b_best
         
 #%% batch perceptron algorithm with learning decay      
 def perc_decay(data,w,b,r,T):   
@@ -75,6 +84,8 @@ def perc_decay(data,w,b,r,T):
     #print('\nBatch Perceptron - Learning Decay')   
     
     wT = w.transpose(); t = 0; r0 = r; # initialize values
+    acc0 = 0 # initialize accuracy baseline
+    lc = np.zeros((T)) # learning curve
     for ep in range(T):   
         #print('.', end=" ")
         data = data.sample(frac=1).reset_index(drop=True)
@@ -90,10 +101,18 @@ def perc_decay(data,w,b,r,T):
                 
             t += 1; # update time step
             r = r0/(1+t); # decay learning rate            
-    
+        
+        # store best accuracy from epochs
+        epAcc = pred_acc('Decay',data,w,b) 
+        lc[ep] = epAcc;
+        if epAcc > acc0: 
+            best_epAcc = [ep, epAcc];
+            w_best = w; b_best = b;
+            acc0 = epAcc;
+        
     #print('\n- Learning rate:', r0, '->', np.round(r,6))
     #print('\nBatch Perceptron - Learning Decay:', r0, '->', np.round(r,6))   
-    return w, b
+    return w, b, best_epAcc, lc, w_best, b_best
 
 #%% batch perceptron algorithm with averaging with fixed learning rate  
 def perc_avg(data,w,b,r,T):   
@@ -101,6 +120,8 @@ def perc_avg(data,w,b,r,T):
     #print('\nBatch Perceptron - Averaging')   
     
     wT = w.transpose(); w_sum = w; b_sum = b; s = 0;# initialize values
+    acc0 = 0 # initialize accuracy baseline
+    lc = np.zeros((T)) # learning curve
     for ep in range(T):   
         #print('.', end=" ")
         data = data.sample(frac=1).reset_index(drop=True)
@@ -118,13 +139,21 @@ def perc_avg(data,w,b,r,T):
             w_sum += w; b_sum += b;
             s += 1;
         
-    w_avg = w_sum/s; # average weight
-    b_avg = b_sum/s; # average bias    
+        w_avg = w_sum/s; # average weight
+        b_avg = b_sum/s; # average bias    
+        
+        # store best accuracy from epochs
+        epAcc = pred_acc('Average',data,w_avg,b_avg) 
+        lc[ep] = epAcc;
+        if epAcc > acc0: 
+            best_epAcc = [ep, epAcc];
+            w_best = w_avg; b_best = b_avg;
+            acc0 = epAcc;
     
     #print('\n- Learning rate:', r) 
     #print('\nBatch Perceptron - Averaging:', r)  
     #print('- Number of Updates:', s) 
-    return w_avg, b_avg
+    return w_avg, b_avg, best_epAcc, lc, w_best, b_best
 
 #%% batch perceptron algorithm with margin and decaying learning rate  
 def perc_margin(data,w,b,r,T,margin):   
@@ -132,6 +161,8 @@ def perc_margin(data,w,b,r,T,margin):
     #print('\nBatch Perceptron - Margin + Decay')   
     
     wT = w.transpose(); t = 0; r0 = r; # initialize values
+    acc0 = 0 # initialize accuracy baseline
+    lc = np.zeros((T)) # learning curve
     for ep in range(T):   
         #print('.', end=" ")
         data = data.sample(frac=1).reset_index(drop=True)
@@ -148,15 +179,23 @@ def perc_margin(data,w,b,r,T,margin):
             t += 1; # update time step
             r = r0/(1+t); # decay learning rate            
     
-    #print('\nBatch Perceptron - Margin + Decay', r, m)   
+        # store best accuracy from epochs
+        epAcc = pred_acc('Margin',data,w,b) 
+        lc[ep] = epAcc;
+        if epAcc > acc0: 
+            best_epAcc = [ep, epAcc];
+            w_best = w; b_best = b;
+            acc0 = epAcc;    
+    
+    #print('\nBatch Perceptron - Margin + Decay', r, margin)   
     #print('\n- Learning rate:', r0, '->', np.round(r,6))
     #print('- Margin:', margin)
-    return w, b
+    return w, b, best_epAcc, lc, w_best, b_best
 
 #%% run
 
 # get data
-# data, X, y = load_demoData('data/csv-format/train.csv')
+# data, X, y = load_trainData('data/csv-format/train.csv')
 
 # # initialize parameters
 # np.random.seed(42) # set random seed

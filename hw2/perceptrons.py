@@ -180,4 +180,4 @@ w_margin, b_margin = perc_decay(data,w0,b0,etas[0],T,margins[0])
    
 predAcc_dict['margin'] = pred_acc('Margin + Decay',y,data,w_margin,b_margin)   
 
-#%% 
+

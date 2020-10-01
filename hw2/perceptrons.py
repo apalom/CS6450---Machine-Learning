@@ -20,11 +20,11 @@ def pred_acc(variant,data,w,b):
         xi = row.drop('Label') # select sample features
         
         if np.dot(wT,xi) + b >= 0: # create predicted label
-            yi_p.append(1)
-        else: yi_p.append(-1)
+            yi_p.append(1) # true label
+        else: yi_p.append(-1) # false label
     
         if yi_p[-1] == yi:
-            acc_cnt += 1;
+            acc_cnt += 1; # count correct labels
            
     acc = acc_cnt/len(data)        
     #print('- Pred accuracy: {:.3f}'.format(acc)) 
@@ -53,6 +53,7 @@ def perc_std(data,w,b,r,T):
     wT = w.transpose(); # initialize values
     acc0 = 0 # initialize accuracy baseline
     lc = np.zeros((T)) # learning curve
+    up = 0 # initialize update count
     for ep in range(T):   
         #print('.', end=" ")
         data = data.sample(frac=1).reset_index(drop=True)
@@ -64,13 +65,15 @@ def perc_std(data,w,b,r,T):
             if yi * (np.dot(wT,xi) + b) <= 0: # mistake LTU
                 w += r * yi * xi # update weight matrix
                 b += r * yi # update bias term
+                up += 1
                 wT = w.transpose()
                 
         # store best accuracy from epochs        
         epAcc = pred_acc('Standard',data,w,b) 
         lc[ep] = epAcc;
         if epAcc > acc0: 
-            best_epAcc = [ep, epAcc];
+            #print([ep, np.round(epAcc,4), up])
+            best_epAcc = [ep, epAcc, up];
             w_best = w; b_best = b;
             acc0 = epAcc;
     
@@ -86,6 +89,7 @@ def perc_decay(data,w,b,r,T):
     wT = w.transpose(); t = 0; r0 = r; # initialize values
     acc0 = 0 # initialize accuracy baseline
     lc = np.zeros((T)) # learning curve
+    up = 0 # initialize update count
     for ep in range(T):   
         #print('.', end=" ")
         data = data.sample(frac=1).reset_index(drop=True)
@@ -97,6 +101,7 @@ def perc_decay(data,w,b,r,T):
             if yi * (np.dot(wT,xi) + b) <= 0: # mistake LTU
                 w += r * yi * xi # update weight matrix
                 b += r * yi # update bias term
+                up += 1;
                 wT = w.transpose()
                 
             t += 1; # update time step
@@ -106,7 +111,7 @@ def perc_decay(data,w,b,r,T):
         epAcc = pred_acc('Decay',data,w,b) 
         lc[ep] = epAcc;
         if epAcc > acc0: 
-            best_epAcc = [ep, epAcc];
+            best_epAcc = [ep, epAcc, up];
             w_best = w; b_best = b;
             acc0 = epAcc;
         
@@ -122,6 +127,7 @@ def perc_avg(data,w,b,r,T):
     wT = w.transpose(); w_sum = w; b_sum = b; s = 0;# initialize values
     acc0 = 0 # initialize accuracy baseline
     lc = np.zeros((T)) # learning curve
+    up = 0 # initialize update count
     for ep in range(T):   
         #print('.', end=" ")
         data = data.sample(frac=1).reset_index(drop=True)
@@ -133,6 +139,7 @@ def perc_avg(data,w,b,r,T):
             if yi * (np.dot(wT,xi) + b) <= 0: # mistake LTU
                 w += r * yi * xi # update weight matrix
                 b += r * yi # update bias term
+                up += 1;
                 wT = w.transpose()
             
             # accumulate weights
@@ -146,7 +153,7 @@ def perc_avg(data,w,b,r,T):
         epAcc = pred_acc('Average',data,w_avg,b_avg) 
         lc[ep] = epAcc;
         if epAcc > acc0: 
-            best_epAcc = [ep, epAcc];
+            best_epAcc = [ep, epAcc, up];
             w_best = w_avg; b_best = b_avg;
             acc0 = epAcc;
     
@@ -163,6 +170,7 @@ def perc_margin(data,w,b,r,T,margin):
     wT = w.transpose(); t = 0; r0 = r; # initialize values
     acc0 = 0 # initialize accuracy baseline
     lc = np.zeros((T)) # learning curve
+    up = 0 # initialize update count
     for ep in range(T):   
         #print('.', end=" ")
         data = data.sample(frac=1).reset_index(drop=True)
@@ -174,16 +182,17 @@ def perc_margin(data,w,b,r,T,margin):
             if yi * (np.dot(wT,xi) + b) <= margin: # mistake LTU
                 w += r * yi * xi # update weight matrix
                 b += r * yi # update bias term
+                up += 1;
                 wT = w.transpose()
                 
             t += 1; # update time step
             r = r0/(1+t); # decay learning rate            
     
-        # store best accuracy from epochs
+        # store best accuracy from each epoch
         epAcc = pred_acc('Margin',data,w,b) 
         lc[ep] = epAcc;
         if epAcc > acc0: 
-            best_epAcc = [ep, epAcc];
+            best_epAcc = [ep, epAcc, up];
             w_best = w; b_best = b;
             acc0 = epAcc;    
     

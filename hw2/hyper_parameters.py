@@ -67,6 +67,7 @@ bestHP = pd.DataFrame(np.zeros((4,6)), index=['std','decay','avg','margin'],
                                     columns=['fold','rate','margin','updates','trn_accuracy', 'test_accuracy'])
 weights = {}; biases = {}; 
 acc_s0 = acc_d0 = acc_a0 = acc_m0 = 0; # initialize baseline accuracy value
+up_s0 = up_d0 = up_a0 = up_m0 = 0; # initialize update counts 
 for f in np.arange(1, n_folds+1):
     up_s0 = up_d0 = up_a0 = up_m0 = 0; # initialize updates counter for each fold
     print('Fold - ', f)
@@ -84,29 +85,31 @@ for f in np.arange(1, n_folds+1):
     T = 10;
         
 #--- standard batch
-    for r in etas:
-        w_std, b_std, _ = perc_std(data_fold['trn'],w0,b0,r,T)
+    print('<<< Standard Perceptron >>>')
+    for r in etas:        
+        w_std, b_std, _, _, _, _ = perc_std(data_fold['trn'],w0,b0,r,T)
         trnAcc_s = pred_acc('Standard - Training', data_fold['trn'], w_std, b_std) 
         testAcc_s = pred_acc('Standard - Testing', data_fold['tst'], w_std, b_std) 
     
         if testAcc_s > acc_s0:
-            print('-Batch Perceptron - Standard:', r) 
+            print('\n-Batch Perceptron - Standard:', r) 
             print('-Update', np.round(acc_s0,3), '->', np.round(testAcc_s,3), f, r, 0)
             acc_s0 = testAcc_s; # if predicted accuracy for these hp is better, update
             up_s0 += 1;
-            bestHP.loc['std'] = [f, r, 0, ups0, trnAcc_s, testAcc_s]
+            bestHP.loc['std'] = [f, r, 0, up_s0, trnAcc_s, testAcc_s]
             weights['std'] = w_std;
             biases['std'] = b_std;      
                      
 # --- decay
 #    for r in etas:
+    print('<<< Decay Perceptron >>>')
     for r in etas:
-        w_decay, b_decay, _ = perc_decay(data_fold['trn'],w0,b0,r,T)
+        w_decay, b_decay, _, _, _, _ = perc_decay(data_fold['trn'],w0,b0,r,T)
         trnAcc_d = pred_acc('Decay - Training', data_fold['trn'], w_decay, b_decay) 
         testAcc_d = pred_acc('Decay - Testing', data_fold['tst'], w_decay, b_decay) 
     
         if testAcc_d > acc_d0:
-            print('-Batch Perceptron - Learning Decay:', r) 
+            print('\n-Batch Perceptron - Learning Decay:', r) 
             print('-Update', np.round(acc_d0,3), '->', np.round(testAcc_d,3), f, r, 0)
             acc_d0 = testAcc_d; # if predicted accuracy for these hp is better, update
             up_d0 += 1;
@@ -115,13 +118,14 @@ for f in np.arange(1, n_folds+1):
             biases['decay'] = b_decay;      
     
 # --- average
+    print('<<< Averaging Perceptron >>>')
     for r in etas:
-        w_avg, b_avg, _ = perc_avg(data_fold['trn'],w0,b0,r,T)
+        w_avg, b_avg, _, _, _, _ = perc_avg(data_fold['trn'],w0,b0,r,T)
         trnAcc_a = pred_acc('Decay - Training', data_fold['trn'], w_avg, b_avg) 
         testAcc_a = pred_acc('Decay - Testing', data_fold['tst'], w_avg, b_avg) 
     
         if testAcc_a > acc_a0:
-            print('-Batch Perceptron - Averaging:', r)
+            print('\n-Batch Perceptron - Averaging:', r)
             print('-Update', np.round(acc_a0,3), '->', np.round(testAcc_a,3), f, r, 0)
             acc_a0 = testAcc_a; # if predicted accuracy for these hp is better, update
             up_a0 += 1;
@@ -129,15 +133,16 @@ for f in np.arange(1, n_folds+1):
             weights['avg'] = w_avg;
             biases['avg'] = b_avg;   
     
-# --- margin + decay        
+# --- margin + decay   
+    print('<<< Margin + Decay Perceptron >>>')     
     for r, m in list(itertools.product(etas, margins)):
         
-        w_margin, b_margin, _ = perc_margin(data_fold['trn'],w0,b0,r,T,m)   
+        w_margin, b_margin, _, _, _, _ = perc_margin(data_fold['trn'],w0,b0,r,T,m)   
         trnAcc_m = pred_acc('Margin + Decay - Training', data_fold['trn'], w_margin, b_margin) 
         testAcc_m = pred_acc('Margin + Decay - Testing', data_fold['tst'], w_margin, b_margin) 
     
         if testAcc_m > acc_m0:
-            print('-Batch Perceptron - Margin + Decay', r, m)   
+            print('\n-Batch Perceptron - Margin + Decay', r, m)   
             print('-Update', np.round(acc_m0,3), '->', np.round(testAcc_m,3), f, r, m)
             acc_m0 = testAcc_m; # if predicted accuracy for these hp is better, update
             up_m0 += 1;
@@ -150,39 +155,39 @@ print(bestHP)
 #%%
 
 # get training data
-data, _, _ = load_trainData('data/csv-format/train.csv')
+train, _, _ = load_trainData('data/csv-format/train.csv')
 
 # initialize parameters
 np.random.seed(42) # set random seed
 
 # initialize weights and bias terms
-predAcc20 = pd.DataFrame(np.zeros((4,2)),index=['std','decay','avg','margin'],
-                         columns=['epoch','accuracy']) # store accuracies
-lc = {};
-w0 = np.random.uniform(-0.01, 0.01, size=(data_fold['trn'].shape[1]-1)) 
+predAcc20 = pd.DataFrame(np.zeros((4,3)),index=['std','decay','avg','margin'],
+                         columns=['epoch','accuracy','updates']) # store accuracies
+lc = {}; up = {};
+w0 = np.random.uniform(-0.01, 0.01, size=(data.shape[1]-1)) 
 b0 = np.random.uniform(-0.01, 0.01)
 T = 20;
 
 # standard perceptron with CV best parameters
 print('std')
 r_std = bestHP.loc['std'].rate
-w_std, b_std, predAcc20.loc['std'], lc['std'], w_stdEp, b_stdEp = perc_std(data,w0,b0,r_std,T)
+w_std, b_std, predAcc20.loc['std'], lc['std'], w_stdEp, b_stdEp = perc_std(train,w0,b0,r_std,T)
 
 # decay perceptron with CV best parameters
 print('decay')
 r_decay = bestHP.loc['decay'].rate
-w_decay, b_decay, predAcc20.loc['decay'], lc['decay'], w_decayEp, b_decayEp = perc_decay(data,w0,b0,r_decay,T)  
+w_decay, b_decay, predAcc20.loc['decay'], lc['decay'], w_decayEp, b_decayEp = perc_decay(train,w0,b0,r_decay,T)  
 
 # average perceptron with CV best parameters
 print('avg')
 r_avg = bestHP.loc['avg'].rate
-w_avg, b_avg, predAcc20.loc['avg'], lc['avg'], w_avgEp, b_avgEp = perc_avg(data,w0,b0,r_avg,T)
+w_avg, b_avg, predAcc20.loc['avg'], lc['avg'], w_avgEp, b_avgEp = perc_avg(train,w0,b0,r_avg,T)
 
 # margin perceptron with CV best parameters
 print('margin')
 r_margin = bestHP.loc['margin'].rate
 m_margin = bestHP.loc['margin'].margin
-w_margin, b_margin, predAcc20.loc['margin'], lc['margin'], w_marginEp, b_marginEp = perc_margin(data,w0,b0,r_margin,T,m_margin)   
+w_margin, b_margin, predAcc20.loc['margin'], lc['margin'], w_marginEp, b_marginEp = perc_margin(train,w0,b0,r_margin,T,m_margin)   
 
 print('Best performance and epoch over 20 epoch training.')
 print(predAcc20)
@@ -209,19 +214,14 @@ plt.title('Perceptron Learning Curves')
 test, _, _ = load_trainData('data/csv-format/test.csv')
 
 testAcc = {};
-testAcc['std'] = pred_acc('Standard - Testing', test, w_std, b_std) 
-testAcc['decay'] = pred_acc('Decay - Testing', test, w_decay, b_decay) 
-testAcc['avg'] = pred_acc('Average - Testing', test, w_avg, b_avg) 
-testAcc['margin'] = pred_acc('Margin + Decay - Testing', test, w_margin, b_margin) 
+testAcc['std'] = pred_acc('Standard - Testing', test, w_stdEp, b_stdEp) 
+testAcc['decay'] = pred_acc('Decay - Testing', test, w_decayEp, b_decayEp) 
+testAcc['avg'] = pred_acc('Average - Testing', test, w_avgEp, b_avgEp) 
+testAcc['margin'] = pred_acc('Margin + Decay - Testing', test, w_marginEp, b_marginEp) 
 
 print('Test accuracy for each perceptron.')
 for v in variants:
     print(v,"-",np.round(testAcc[v],4))
-
-
-
-
-
 
 
 

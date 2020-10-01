@@ -164,7 +164,7 @@ np.random.seed(42) # set random seed
 predAcc20 = pd.DataFrame(np.zeros((4,3)),index=['std','decay','avg','margin'],
                          columns=['epoch','accuracy','updates']) # store accuracies
 lc = {}; up = {};
-w0 = np.random.uniform(-0.01, 0.01, size=(data.shape[1]-1)) 
+w0 = np.random.uniform(-0.01, 0.01, size=(train.shape[1]-1)) 
 b0 = np.random.uniform(-0.01, 0.01)
 T = 20;
 

@@ -93,6 +93,7 @@ def perc_decay(data,w,b,r,T):
     for ep in range(T):   
         #print('.', end=" ")
         data = data.sample(frac=1).reset_index(drop=True)
+        t += 1; # update t every Epoch (improvement after Oct. 1 class)
         
         for ix, row in data.iterrows():
             yi = row.Label # select sample label
@@ -104,7 +105,7 @@ def perc_decay(data,w,b,r,T):
                 up += 1;
                 wT = w.transpose()
                 
-            t += 1; # update time step
+            #t += 1; # update time step
             r = r0/(1+t); # decay learning rate            
         
         # store best accuracy from epochs

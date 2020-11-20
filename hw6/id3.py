@@ -34,10 +34,16 @@ def entropy_A(df):
             
             for lbl in lblsIn:
                 
-                sizeSv = len(df[attribute][df[attribute]==v][df.Label == lbl]) 
-                sizeS = len(df[attribute][df[attribute]==v])
+                #sizeSv = len(df[attribute][df[attribute]==v][df.Label == lbl]) 
+                #sizeSv = len(df[df[attribute] == v][df.Label == lbl]) 
+                #sizeS = len(df[attribute][df[attribute]==v])
+                #temp = df[df[attribute] == v]
+                #sizeSv = len(temp[temp.Label == lbl])
+                S = df[df[attribute] == v]
+                sizeSv = len(S[S.Label == lbl])                 
+                sizeS = len(S)
                 
-                if sizeSv > 0:
+                if sizeSv and sizeS > 0:
                     p_Av = sizeSv/sizeS;            
                     H_Av += -p_Av * np.log2(p_Av)
                                     
@@ -45,7 +51,6 @@ def entropy_A(df):
             
             H_A += fracS*H_Av       
         
-
         entA[attribute] = H_A
         
     return entA
@@ -61,14 +66,11 @@ def infoGain(entLbl, entA):
 
 #df = dataTrn.sample(int(0.004*len(dataTrn)), replace=True)
 
-entLbl = entropy_Lbl(prob(df1.Label))
-entA = entropy_A(df1)
+#entLbl = entropy_Lbl(prob(df1.Label))
+#entA = entropy_A(df1)
+#igA = infoGain(entLbl, entA)
 
-igA = infoGain(entLbl, entA)
-
-#%%
-
-
+#%% run id3 algorithms
 
 def id3(df, df0, attributes, depth, parent=None):
     # if all examples have the same label return a single node tree    
@@ -135,19 +137,20 @@ def endLeaf(tree):
         
     return tree
 
-
 trees = {}      
 depths = [1,2,4,8]
 t_st = time.time()
 
-df = dataTrn.sample(int(0.1*len(dataTrn)), replace=True)
-df = df.reset_index(drop=True)
+
+#df = df.reset_index(drop=True)
 
 for maxDepth in depths:
     trees[maxDepth] = {}
     print('\nMax Depth:', maxDepth)
     
     for i in np.arange(200):
+        df = dataTrn.sample(int(0.1*len(dataTrn)), replace=True)
+        
         print('>> Tree:', i)
         attributes = list(df.columns[1:])
         # input id3(df, df0, attributes, depth, maxDepth, parent=None):
@@ -159,13 +162,72 @@ for maxDepth in depths:
 t_en = time.time()
 print('\nRuntime (m):', np.round((t_en - t_st)/60,3))
 
+#%% dt prediction
+
+data_np = dataTrn.to_numpy() # split data
+y = data_np[:,0]
+X = data_np[:,1:]
+
+dataTrfm = {}
+
+# over all tree depths
+for maxDepth in depths:
+    print('\n++ Tree Depth: ', maxDepth)
+    treesDeep = trees[maxDepth]
+    dataTrfm[maxDepth] = np.zeros((X.shape[0],200+1))
+    
+    # over all data samples
+    for i in range(X.shape[0]):
+        if np.mod(i,100) == 0:
+            print('.', end=" ") 
+                
+        xi = X[i]       
+        
+        # over all trees
+        for t in range(0,200):    
+            
+            dt = treesDeep[t]            
+            dataTrfm[maxDepth][i,t] = predDT(xi, dt)    
+
+#%% output transformed data
+
+for maxDepth in depths:
+    path = 'data/dt_transformed/depth'+str(maxDepth)+'.csv'
+    np.savetxt(path,dataTrfm[maxDepth],delimiter=",")
+
+
+                
+#%%
+
+def predDT(sample, tree):
+    
+    # search over all features in data sample xi
+    for feature in range(len(sample)):
+        
+        # if the feature was used in the DT, traverse tree
+        if feature in list(tree.keys()):
+            
+            result = tree[feature][sample[feature]]
+            
+            # if result is a dictionary... traverse that subtree
+            if isinstance(result,dict):
+                return predDT(sample,result)
+
+            else:
+                return result
+
+#%%
+
+def dtPred(sample, tree)
+
 #%%
 df = dataTrn.sample(int(0.1*len(dataTrn)), replace=True)
 df = df.reset_index(drop=True)
 #df1 = df[['Label',1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]] 
 
+#tree0 = trees[1][0]            
+#tree4 = endLeaf(trees[2][0])
+
 #%%
 
 
-#tree0 = trees[1][0]            
-#tree4 = endLeaf(trees[2][0])

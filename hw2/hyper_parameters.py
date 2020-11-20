@@ -121,8 +121,8 @@ for f in np.arange(1, n_folds+1):
     print('<<< Averaging Perceptron >>>')
     for r in etas:
         w_avg, b_avg, _, _, _, _ = perc_avg(data_fold['trn'],w0,b0,r,T)
-        trnAcc_a = pred_acc('Decay - Training', data_fold['trn'], w_avg, b_avg) 
-        testAcc_a = pred_acc('Decay - Testing', data_fold['tst'], w_avg, b_avg) 
+        trnAcc_a = pred_acc('Averaging - Training', data_fold['trn'], w_avg, b_avg) 
+        testAcc_a = pred_acc('Averaging - Testing', data_fold['tst'], w_avg, b_avg) 
     
         if testAcc_a > acc_a0:
             print('\n-Batch Perceptron - Averaging:', r)

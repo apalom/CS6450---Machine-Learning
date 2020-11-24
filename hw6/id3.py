@@ -8,18 +8,21 @@ Created on Thu Nov 19 08:27:32 2020
 import numpy as np
 np.random.seed(42)
 
+# calculate label probability
 def prob(y):
     labels = y.unique(); p = [];
     for lbl in labels:
         p.append(list(y.values).count(lbl)/len(y)) # probabilty of Yes label
     return p
 
+# calculate label entropy
 def entropy_Lbl(p):
     H = 0
     for pi in p:        
         H += -pi * np.log2(pi)
     return H
 
+# calculate attribute entropy
 def entropy_A(df):
 
     lblsIn = df.Label.unique()    
@@ -55,6 +58,7 @@ def entropy_A(df):
         
     return entA
 
+# calculate information gain
 def infoGain(entLbl, entA):
     igA = {}
     # calculate information gain
@@ -120,6 +124,7 @@ def id3(df, df0, attributes, depth, parent=None):
             
     return tree
 
+# add end leafs (labels) to terminated branches based on most common label
 def endLeaf(tree):
     print('    </> add leaves')
     for k,v in tree.items():                             
@@ -141,9 +146,6 @@ trees = {}
 depths = [1,2,4,8]
 t_st = time.time()
 
-
-#df = df.reset_index(drop=True)
-
 for maxDepth in depths:
     trees[maxDepth] = {}
     print('\nMax Depth:', maxDepth)
@@ -164,41 +166,7 @@ print('\nRuntime (m):', np.round((t_en - t_st)/60,3))
 
 #%% dt prediction
 
-data_np = dataTrn.to_numpy() # split data
-y = data_np[:,0]
-X = data_np[:,1:]
-
-dataTrfm = {}
-
-# over all tree depths
-for maxDepth in depths:
-    print('\n++ Tree Depth: ', maxDepth)
-    treesDeep = trees[maxDepth]
-    dataTrfm[maxDepth] = np.zeros((X.shape[0],200+1))
-    
-    # over all data samples
-    for i in range(X.shape[0]):
-        if np.mod(i,100) == 0:
-            print('.', end=" ") 
-                
-        xi = X[i]       
-        
-        # over all trees
-        for t in range(0,200):    
-            
-            dt = treesDeep[t]            
-            dataTrfm[maxDepth][i,t] = predDT(xi, dt)    
-
-#%% output transformed data
-
-for maxDepth in depths:
-    path = 'data/dt_transformed/depth'+str(maxDepth)+'.csv'
-    np.savetxt(path,dataTrfm[maxDepth],delimiter=",")
-
-
-                
-#%%
-
+# return label prediction for each data sample and decision tree
 def predDT(sample, tree):
     
     # search over all features in data sample xi
@@ -215,11 +183,41 @@ def predDT(sample, tree):
 
             else:
                 return result
+       
+# now transform data based on 200 trees
+data_np = dataTrn.to_numpy() # convert to NumPy for computational efficiency
+y = data_np[:,0]
+X = data_np[:,1:]
 
-#%%
+dataTrfm = {}
 
-def dtPred(sample, tree)
+# over all tree depths
+for maxDepth in depths:
+    print('\n++ Tree Depth: ', maxDepth)
+    treesDeep = trees[maxDepth]
+    dataTrfm[maxDepth] = np.zeros((X.shape[0],200+1)) # add additional column for bias
+    
+    # over all data samples
+    for i in range(X.shape[0]):
+        if np.mod(i,100) == 0:
+            print('.', end=" ") 
+                
+        xi = X[i]       
+        
+        # over all trees
+        for t in range(0,200):                
+            dt = treesDeep[t]            
+            dataTrfm[maxDepth][i,t] = predDT(xi, dt)   
+            
+    # add columns of ones for bias term
+    dataTrfm[maxDepth][:,-1] = np.ones((len(dataTrfm[maxDepth][:,-1])))
 
+#%% output transformed data
+
+for maxDepth in depths:
+    path = 'data/dt_transformed/depth'+str(maxDepth)+'.csv'
+    np.savetxt(path,dataTrfm[maxDepth],delimiter=",")
+                
 #%%
 df = dataTrn.sample(int(0.1*len(dataTrn)), replace=True)
 df = df.reset_index(drop=True)
@@ -227,7 +225,5 @@ df = df.reset_index(drop=True)
 
 #tree0 = trees[1][0]            
 #tree4 = endLeaf(trees[2][0])
-
-#%%
 
 

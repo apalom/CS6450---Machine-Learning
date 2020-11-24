@@ -30,3 +30,37 @@ def load_data(path_to_CV, path_to_Trn, path_to_Tst):
     return data, dataTrain, dataTest
 
 dataCV, dataTrn, dataTst = load_data('data/csv-format/CVfolds/','data/csv-format/train.csv','data/csv-format/test.csv')
+
+#%% cross-validation data folds for ensemble learning
+
+def ensembleCV(dataTrfm,dataTsfm,depths):
+    
+    n_folds = 5;
+    idx = np.arange(0,len(dataTrfm[1]));
+    data = {}; X = {}; y = {};
+        
+    for maxDepth in depths:
+        data[maxDepth] = {}
+        np.random.shuffle(idx) # shuffle index
+        print('Depth:',maxDepth)
+        for fold in range(1,n_folds+1):
+            print('-> Fold: {}'.format(fold), end=" ")
+            first = (fold-1)*int(0.2*len(idx)); last = first+int(0.2*len(idx));
+            idxFold = idx[first:last]
+            
+            data[maxDepth][fold] = dataTrfm[maxDepth][idxFold]
+        print("\n")
+    dataTest = 0
+    
+    return data, dataTrfm, dataTest
+
+dataCV, dataTrn, dataTst = ensembleCV(dataTrfm,depths)
+
+#%%
+
+idx = np.arange(0,len(dataTrfm[1]))
+np.random.shuffle(idx)
+
+for f in n_folds:
+    dataf[f]
+

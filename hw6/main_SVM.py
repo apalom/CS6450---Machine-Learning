@@ -16,11 +16,11 @@ from svm import *
 from results import *
 #from logReg import *
 
-def runid3SVM_CV(dataCV):
+def runSVM_CV(dataCV):
     # Using current time 
     t_st = time.time()
     
-    lrs = [10**0, 10**-1, 10**-2, 10**-3, 10**-4, 10**-5]; #intiial learning rates
+    lrs = [10**0, 10**-1, 10**-2, 10**-3, 10**-4]; #intiial learning rates
     Cs = [10**3, 10**2, 10**1, 10**0, 10**-1, 10**-2,]; #initial tradeoffs
     hps = list(itertools.product(lrs, Cs))
     best_perf = pd.DataFrame(columns=['Ep','lr', 'C', 'acc', 'obj']); 
@@ -47,7 +47,7 @@ def runid3SVM_CV(dataCV):
     
     return best_perf
 
-svmid3_bestHP = runid3SVM_CV(dataCV);
+svmid3_bestHP = runSVM_CV(dataCV);
 
 #%% train with best HP
 

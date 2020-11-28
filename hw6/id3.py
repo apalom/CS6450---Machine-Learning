@@ -184,33 +184,46 @@ def predDT(sample, tree):
             else:
                 return result
        
-# now transform data based on 200 trees
-data_np = dataTrn.to_numpy() # convert to NumPy for computational efficiency
-y = data_np[:,0]
-X = data_np[:,1:]
-
-dataTrfm = {}
-
-# over all tree depths
-for maxDepth in depths:
-    print('\n++ Tree Depth: ', maxDepth)
-    treesDeep = trees[maxDepth]
-    dataTrfm[maxDepth] = np.zeros((X.shape[0],200+1)) # add additional column for bias
+def transformData(data, depths):
+    # now transform data based on 200 trees
+    data_np = data.to_numpy() # convert to NumPy for computational efficiency
+    y = data_np[:,0]
+    X = data_np[:,1:]
     
-    # over all data samples
-    for i in range(X.shape[0]):
-        if np.mod(i,100) == 0:
-            print('.', end=" ") 
-                
-        xi = X[i]       
+    dataTrfm = {}
+    
+    # over all tree depths
+    for maxDepth in depths:
+        print('\n++ Tree Depth: ', maxDepth)
+        treesDeep = trees[maxDepth]
+        dataTrfm[maxDepth] = np.zeros((X.shape[0],200)) # add additional column for bias
         
-        # over all trees
-        for t in range(0,200):                
-            dt = treesDeep[t]            
-            dataTrfm[maxDepth][i,t] = predDT(xi, dt)   
+        # over all data samples
+        for i in range(X.shape[0]):
+            if np.mod(i,100) == 0:
+                print('.', end=" ") 
+                    
+            xi = X[i]       
             
-    # add columns of ones for bias term
-    dataTrfm[maxDepth][:,-1] = np.ones((len(dataTrfm[maxDepth][:,-1])))
+            # over all trees
+            for t in range(0,200):                
+                dt = treesDeep[t]            
+                dataTrfm[maxDepth][i,t] = predDT(xi, dt)   
+                
+        # bias weight will be added at SVM algorithm
+        #dataTrfm[maxDepth][:,-1] = np.ones((len(dataTrfm[maxDepth][:,-1])))
+        dataTrfm[maxDepth] = np.insert(dataTrfm[maxDepth], 0, y, axis=1)
+    return dataTrfm
+
+print('\nEnsemble Training Data')
+dataTrfm_trn = transformData(dataTrn, depths)
+print('\nEnsemble Testing Data')
+dataTrfm_tst = transformData(dataTst, depths)
+print('\nEnsemble Cross-Validation Data')
+dataTrfm_CV = {}
+for fold in dataCV:
+    print('\n   Fold:', fold)
+    dataTrfm_CV[fold] = transformData(dataCV[fold], depths)
 
 #%% output transformed data
 

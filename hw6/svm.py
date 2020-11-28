@@ -13,7 +13,7 @@ import numpy as np
 
 def svm(data, g0, C, tau, T):
 
-    print('SVM Model')
+    print('\nSVM Model')
     print('[-- HP: lr {} + C {} --]'.format(g0,C))
     data_np = data.to_numpy() # split data
     y = data_np[:,0]

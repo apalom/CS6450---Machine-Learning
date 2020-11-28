@@ -11,36 +11,39 @@ Ensemble Learning: SVM on id3
 import time as time
 import pandas as pd
 import numpy as np
+import os
 import os.path
 import itertools
 import matplotlib.pyplot as plt
 from svm import *
 from results import *
-from loadData import *
 
-def runSVM_CV(dataCV):
+def runSVMid3_CV(dataCV, depths):
     # Using current time 
     t_st = time.time()
     
-    lrs = [10**0, 10**-1, 10**-2, 10**-3, 10**-4]; #intiial learning rates
+    lrs = [10**0, 10**-1, 10**-2, 10**-3, 10**-4, 10**-5]; #intiial learning rates
     Cs = [10**3, 10**2, 10**1, 10**0, 10**-1, 10**-2,]; #initial tradeoffs
     hps = list(itertools.product(lrs, Cs))
-    best_perf = pd.DataFrame(columns=['Ep','lr', 'C', 'acc', 'obj']); 
-    T = 50;
+    best_perf = pd.DataFrame(columns=['Ep','depth','lr', 'C', 'acc', 'obj']); 
+    T = 100;
     
     for f in dataCV:
         print('\n Fold -', f)
-        data = dataCV[f]
-        acc0 = 0; # reset accuracy
         
-        for lr, C in hps: # for learning rates and tradeoff combinations
+        # depths 1 and 2 are correct... depths 4 and 8 yield constant accuracy
+        for d in [4]:    
+            data = pd.DataFrame(dataCV[f][d]) # data folds and depths
+            acc0 = 0; # reset accuracy
             
-            tau = 0.01*C; # early stop threshold
-            w_best, best_acc, lc, obj, losses = svm(data, lr, C, tau, T)
-            
-            if best_acc > acc0:
-                best_perf.loc[f] = [len(lc), lr, C, best_acc, obj[-1]]
-                acc0 = best_acc
+            for lr, C in hps: # for learning rates and tradeoff combinations            
+                
+                tau = 0.01*C; # early stop threshold
+                w_best, best_acc, lc, obj, losses = svm(data, lr, C, tau, T)
+                
+                if best_acc > acc0:
+                    best_perf.loc[f] = [len(lc), d, lr, C, best_acc, obj[-1]]
+                    acc0 = best_acc
             
     print('\n -- Best Performance over CV Folds -- \n', best_perf)        
         
@@ -49,7 +52,7 @@ def runSVM_CV(dataCV):
     
     return best_perf
 
-svm_bestHP = runSVM_CV(dataCV);
+id3svm_bestHP = runSVMid3_CV(dataTrfm_CV, depths);
 
 #%% train with best HP
 

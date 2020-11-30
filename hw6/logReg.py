@@ -8,27 +8,15 @@ Created on Wed Nov 18 15:56:58 2020
 # import libraries
 import pandas as pd
 import numpy as np
-
-#%% Logistic Regression model
-
-t_st = time.time()
-
-lrs = [10**0, 10**-1, 10**-2, 10**-3, 10**-4, 10**-5]; #intiial learning rates
-sig2s = [10**-1, 10**0, 10**1, 10**2, 10**3, 10**4,]; #initial tradeoffs
-hps = list(itertools.product(lrs, Cs))
-best_perf = pd.DataFrame(columns=['Ep','lr', 'sig2', 'acc', 'obj']); 
-T = 25; 
-
-Lr = 1; sig2 = 1; tau = 0.01*sig2
-
-w_LogR, acc_LogR, lc_LogR, obj_LogR, losses_LogR = logReg(dataCV[1], Lr, sig2, tau, T)
+import time as time
+from results import *
 
 #%% logReg model
 
-def logReg(data, g0, sig2s, tau, T):
+def logReg(data, g0, sig2, tau, T):
 
     print('Logistic Regression Model')    
-    print('[-- HP: lr {} + sig2 {} --]'.format(g0,sig2s))
+    print('[-- HP: lr {} + sig2 {} --]'.format(g0,sig2))
     data_np = data.to_numpy() # split data
     y = data_np[:,0]
     X = data_np[:,1:]
@@ -38,25 +26,23 @@ def logReg(data, g0, sig2s, tau, T):
     acc0 = 0; # initialize accuracy baseline    
     up = 0; # initialize update counters
     idx = np.arange(X.shape[0]); # index for stepping through data
-    
+    gt = g0; # learning rate
     lc = np.zeros((T)); # learning curve
     obj = np.zeros((T+1)); # initialize objective function curve
-    obj[0] = 100; # intial objective value to dummy high value
+    obj[0] = 10**5; # intial objective value to dummy high value
     losses = np.zeros((T)); # record loss progression over epochs
         
     for ep in range(T):
-        np.random.shuffle(idx) # shuffle index
-        gt = g0/(1+ep); 
-        
-        #print('Objective:',obj[ep])    
+        np.random.shuffle(idx) # shuffle index       
+ 
         for i in idx:
             yi = y[i]; xi = X[i];    
         
             # update weights
-            w -= gt*((-yi*xi)*sigmoid(-yi*np.dot(w.T,xi)) + np.divide(2*w,sig2s))            
+            w = w - gt*((-yi*xi)*sigmoid(-yi*np.dot(w.T,xi)) + np.divide(2*w,sig2))   
             
-        # logReg objective function
-        obj[ep+1] = np.log(1+np.exp(-yi*np.dot(w.T,xi))) + np.divide(np.dot(w.T,w),sig2s)
+        # logReg objective function    
+        obj[ep+1] = np.log(1+np.exp(-yi*np.dot(w.T,xi))) + np.divide(np.dot(w.T,w),sig2)
 
         #make label predictions & return training accuracy                
         epAcc = accuracy(X,y,w)         
@@ -70,12 +56,12 @@ def logReg(data, g0, sig2s, tau, T):
         print('-> {:.4f}'.format(epAcc), end=" ")      
         
         # calculat epoch loss
-        losses[ep] = loss(X,y,w)
+        losses[ep] = lossLogReg(X,y,w)
         
         # early stop condition on change in objective over epochs
         if np.abs(obj[ep+1] - obj[ep]) < tau:
             print('\n    Early stop - epoch {}'.format(ep))
-            print('    Objective values {:.2f} -> {:.2f}'.format(obj[ep+1], obj[ep]))            
+            print('    Objective values {:.3f} -> {:.3f}'.format(obj[ep], obj[ep+1]))            
             
             lc = lc[0:ep+1]
             obj = obj[0:ep+1+1]
@@ -87,3 +73,13 @@ def logReg(data, g0, sig2s, tau, T):
 
 def sigmoid(z):
     return 1/(1+np.exp(-z))
+
+def lossLogReg(X,y,w):
+    
+    L = 0
+    for i in range(len(X)):
+        yi = y[i]; xi = X[i];    
+        # Logreg loss
+        L += np.log(1 + np.exp(-yi * np.dot(w.T,xi)))
+    
+    return L

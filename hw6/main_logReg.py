@@ -12,9 +12,8 @@ import numpy as np
 import os.path
 import itertools
 import matplotlib.pyplot as plt
-from svm import *
 from results import *
-#from logReg import *
+from logReg import *
 
 def runLogReg_CV(dataCV):
     # Using current time 
@@ -22,27 +21,36 @@ def runLogReg_CV(dataCV):
     
     lrs = [10**0, 10**-1, 10**-2, 10**-3, 10**-4, 10**-5]; #intiial learning rates
     sig2s = [10**-1, 10**0, 10**1, 10**2, 10**3, 10**4,]; #initial tradeoffs
-    hps = list(itertools.product(lrs, Cs))
+    hps = list(itertools.product(lrs, sig2s))
     best_perf = pd.DataFrame(columns=['Ep','lr', 'sig2', 'acc', 'obj']); 
     T = 50;
     
     for f in dataCV:
         print('\n Fold -', f)
-        data = dataCV[f]
+        # data prep for validation fold
+        dataVal = dataCV[f]['val'].to_numpy()
+        X_val = dataVal[:,1:]; X_val = np.hstack((X_val, np.ones((X_val.shape[0],1)))); # add bias
+        y_val = dataVal[:,0];            
+        # data fold for training
+        data = dataCV[f]['trn'];      
         acc0 = 0; # reset accuracy
         
-        for lr, sig2s in hps: # for learning rates and tradeoff combinations
+        for lr, sig2 in hps: # for learning rates and tradeoff combinations
             
-            tau = 0.001*sig2s; # early stop threshold
-            w_best, best_acc, lc, obj, losses = logReg(data, lr, sig2s, tau, T)
-            
-            if best_acc > acc0:
-                best_perf.loc[f] = [len(lc), lr, sig2s, best_acc, obj[-1]]
-                acc0 = best_acc
-            
-    print('\n -- Best Performance over CV Folds -- \n')
-    print(best_perf)        
+            tC = 0.0001;
+            tau = tC*sig2; # early stop threshold
+            # CV training
+            w_best, _, lc, obj, losses = logReg(data, lr, sig2, tau, T)
+            # CV validation 
+            acc_Val = accuracy(X_val, y_val, w_best) # accuracy(X,y,w):
         
+            if acc_Val > acc0:
+                best_perf.loc[f] = [len(lc), lr, sig2, acc_Val, obj[-1]]
+                acc0 = acc_Val
+            
+    print('\n -- Best Performance over CV Folds -- ')
+    print(best_perf)        
+    print('\nEarly stop:', tC)      
     t_en = time.time()
     print('\nRuntime (m):', np.round((t_en - t_st)/60,3))
     
@@ -52,18 +60,22 @@ logReg_bestHP = runLogReg_CV(dataCV);
 
 #%% train with best HP
 
-def runLogReg_trn(dataTrn, lr, C, tau, T):
+def runLogReg_trn(dataTrn, lr, sig2, tau, T):
     
-    w_best, best_acc, lc, obj, losses = logReg(data, lr, C, tau, T)
+    w_best, best_acc, lc, obj, losses = logReg(data, lr, sig2, tau, T)
         
-    return w_best, acc0, lc, obj, losses
+    return w_best, best_acc, lc, obj, losses
 
-bestLr = 0.1; bestC = 1000; bestTau = 0.00001*bestC; T = 100;
-trnW, trnAcc, trnLC, trnObj, trnLosses = runLogReg_trn(dataTrn, bestLr, bestC, bestTau, T)
-     
-plot_learning(trnLC, trnObj, bestLr, bestC, bestTau, 'logReg_trnLearning.pdf')
-plot_loss(trnLosses, bestLr, bestC, bestTau, 'logReg_trnLoss.pdf')
-#%% test with best weight vector
+bestLr = 0.1; bestSig2 = 1000; bestTau = 0.0001*bestSig2; T = 100;
+
+logReg_Trn = {}
+logReg_Trn['w'], logReg_Trn['Acc'], logReg_Trn['LC'], logReg_Trn['Obj'], logReg_Trn['Losses'] = runLogReg_trn(dataTrn, bestLr, bestSig2, bestTau, T)
+print('    Accuracy: {:.3f}'.format(logReg_Trn['Acc']))
+ 
+plot_learning(logReg_Trn['LC'], logReg_Trn['Obj'], bestLr, bestC, bestTau, 'logReg_trnLearning.pdf')
+plot_loss(logReg_Trn['Losses'], bestLr, bestC, bestTau, 'logReg_trnLoss.pdf')
+
+#% test with best weight vector
 
 def runLogReg_tst(dataTst, w):
     
@@ -74,10 +86,8 @@ def runLogReg_tst(dataTst, w):
     
     acc = accuracy(X,y,w);
     
-    print('Test accuracy: {:.4f}'.format(acc))
+    print('\nTest accuracy: {:.3f}'.format(acc))
     
     return acc
 
-tstAcc = runLogReg_tst(dataTst, trnW)
-
-#%%
+tstAcc = runLogReg_tst(dataTst, logReg_Trn['w'])

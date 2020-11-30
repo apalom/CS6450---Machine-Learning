@@ -59,12 +59,12 @@ def svm(data, g0, C, tau, T):
         print('-> {:.4f}'.format(epAcc), end=" ")      
         
         # calculat epoch loss
-        losses[ep] = loss(X,y,w)
+        losses[ep] = lossSVM(X,y,w)
         
         # early stop condition on change in objective over epochs
         if np.abs(obj[ep+1] - obj[ep]) < tau:
             print('\n    Early stop - epoch {}'.format(ep))
-            print('    Objective values {:.2f} -> {:.2f}'.format(obj[ep+1], obj[ep]))            
+            print('    Objective values {:.3f} -> {:.3f}'.format(obj[ep+1], obj[ep]))            
             
             lc = lc[0:ep+1]
             obj = obj[0:ep+1+1]
@@ -94,7 +94,7 @@ def accuracy(X,y,w):
     
     return acc
 
-def loss(X,y,w):
+def lossSVM(X,y,w):
     
     L = 0
     for i in range(len(X)):

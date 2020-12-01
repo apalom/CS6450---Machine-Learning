@@ -142,33 +142,6 @@ def endLeaf(tree):
         
     return tree
 
-
-#%% use training set to build decision trees
-trees = {}      
-depths = [1,2,4,8]
-t_st = time.time()
-
-for maxDepth in depths:
-    trees[maxDepth] = {}
-    print('\nMax Depth:', maxDepth)
-    
-    for i in np.arange(200):
-        df = dataTrn.sample(int(0.1*len(dataTrn)), replace=True)
-        
-        #print('>> Tree:', i)
-        attributes = list(df.columns[1:])
-        # input id3(df, df0, attributes, depth, maxDepth, parent=None):
-        prunedTree = id3(df,df,attributes,0,maxDepth)
-        trees[maxDepth][i] = endLeaf(prunedTree) #add end leaf labels to tree
-        
-        #print(trees[maxDepth][i])
-        
-        if np.mod(i,10) == 0:
-            print('.', end=" ") 
-        
-t_en = time.time()
-print('\nRuntime (m):', np.round((t_en - t_st)/60,3))
-
 #%% dt prediction
 
 # return label prediction for each data sample and decision tree
@@ -189,7 +162,7 @@ def predDT(sample, tree):
             else:
                 return result
        
-def transformData(data, depths):
+def transformData(data, trees, depths):
     # now transform data based on 200 trees
     data_np = data.to_numpy() # convert to NumPy for computational efficiency
     y = data_np[:,0]
@@ -220,28 +193,20 @@ def transformData(data, depths):
         
     return dataTrfm
 
-print('\n\nEnsemble Training Data')
-dataTrfm_trn = transformData(dataTrn, trees, depths)
-print('\n\nEnsemble Testing Data')
-dataTrfm_tst = transformData(dataTst, trees, depths)
-print('\nEnsemble Cross-Validation Data')
-dataTrfm_CV = {}
-for fold in dataCV:
-    print('\n   Fold:', fold)
-    dataTrfm_CV[fold] = transformData(dataCV[fold], trees, depths)
+# print('\n\nEnsemble Training Data')
+# dataTrfm_trn = transformData(dataTrn, trees, depths)
+# print('\n\nEnsemble Testing Data')
+# dataTrfm_tst = transformData(dataTst, trees, depths)
+# print('\nEnsemble Cross-Validation Data')
+# dataTrfm_CV = {}
+# for fold in dataCV:
+#     print('\n   Fold:', fold)
+#     dataTrfm_CV[fold] = transformData(dataCV[fold], trees, depths)
 
 #%% output transformed data
 
 for maxDepth in depths:
     path = 'data/dt_transformed/depth'+str(maxDepth)+'.csv'
     np.savetxt(path,dataTrfm[maxDepth],delimiter=",")
-                
-#%%
-df = dataTrn.sample(int(0.1*len(dataTrn)), replace=True)
-df = df.reset_index(drop=True)
-#df1 = df[['Label',1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]] 
-
-#tree0 = trees[1][0]            
-#tree4 = endLeaf(trees[2][0])
 
 

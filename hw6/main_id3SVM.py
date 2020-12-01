@@ -15,8 +15,54 @@ import os
 import os.path
 import itertools
 import matplotlib.pyplot as plt
-from svm import *
+from id3 import *
 from results import *
+
+
+#%% use training set to build decision trees
+trees = {}      
+depths = [1,2,4,8]
+t_st = time.time()
+
+for maxDepth in depths:
+    trees[maxDepth] = {}
+    print('\nMax Depth:', maxDepth)
+    
+    for i in np.arange(200):
+        df = dataTrn.sample(int(0.1*len(dataTrn)), replace=True)
+        
+        #print('>> Tree:', i)
+        attributes = list(df.columns[1:])
+        # input id3(df, df0, attributes, depth, maxDepth, parent=None):
+        prunedTree = id3(df,df,attributes,0,maxDepth)
+        trees[maxDepth][i] = endLeaf(prunedTree) #add end leaf labels to tree
+        
+        #print(trees[maxDepth][i])
+        
+        if np.mod(i,10) == 0:
+            print('.', end=" ") 
+        
+t_en = time.time()
+print('\nRuntime (m):', np.round((t_en - t_st)/60,3))
+
+#%% transformer data
+
+print('\n\nEnsemble Training Data')
+dataTrfm_trn = transformData(dataTrn, trees, depths)
+print('\n\nEnsemble Testing Data')
+dataTrfm_tst = transformData(dataTst, trees, depths)
+
+print('\nEnsemble Cross-Validation Data')
+dataTrfm_CV = {}
+for fold in dataCV:
+    print('\n   Fold:', fold)
+    dataTrfm_CV[fold] = {}
+    print(' -Training')
+    dataTrfm_CV[fold]['trn'] = transformData(dataCV[fold]['trn'], trees, depths)
+    print(' -Validation')
+    dataTrfm_CV[fold]['val'] = transformData(dataCV[fold]['val'], trees, depths)
+
+#%% run SVM over trees ensemble
 
 def runSVMid3_CV(dataCV, depths):
     # Using current time 

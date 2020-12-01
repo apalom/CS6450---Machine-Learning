@@ -9,13 +9,14 @@ Created on Wed Nov 18 09:04:24 2020
 import time as time
 import pandas as pd
 import numpy as np
+np.random.seed(42)
 import os.path
 import itertools
 import matplotlib.pyplot as plt
 from results import *
 from logReg import *
 
-def runLogReg_CV(dataCV):
+def runLogReg_CV(dataCV, es):
     # Using current time 
     t_st = time.time()
     
@@ -37,8 +38,7 @@ def runLogReg_CV(dataCV):
         
         for lr, sig2 in hps: # for learning rates and tradeoff combinations
             
-            tC = 0.0001;
-            tau = tC*sig2; # early stop threshold
+            tau = es*sig2; # early stop threshold
             # CV training
             w_best, _, lc, obj, losses = logReg(data, lr, sig2, tau, T)
             # CV validation 
@@ -50,27 +50,33 @@ def runLogReg_CV(dataCV):
             
     print('\n -- Best Performance over CV Folds -- ')
     print(best_perf)        
-    print('\nEarly stop:', tC)      
+    print('\nEarly stop:', es)      
     t_en = time.time()
-    print('\nRuntime (m):', np.round((t_en - t_st)/60,3))
+    t_run = np.round((t_en - t_st)/60,3)
+    print('\nRuntime (m):', t_run)
     
-    return best_perf
+    return best_perf, t_run
 
-logReg_bestHP = runLogReg_CV(dataCV);
+reps = {}; runtimes = {}; es = 0.000000001;
+for r in range(3):
+    # input dataCV and early stopping factor
+    logReg_bestHP, t_run = runLogReg_CV(dataCV, es);
+    reps[r] = logReg_bestHP;
+    runtimes[r] = t_run    
 
 #%% train with best HP
 
 def runLogReg_trn(dataTrn, lr, sig2, tau, T):
     
-    w_best, best_acc, lc, obj, losses = logReg(data, lr, sig2, tau, T)
+    w_best, best_acc, lc, obj, losses = logReg(dataTrn, lr, sig2, tau, T)
         
     return w_best, best_acc, lc, obj, losses
 
-bestLr = 0.1; bestSig2 = 1000; bestTau = 0.0001*bestSig2; T = 100;
+bestLr = 0.1; bestSig2 = 1000; bestTau = es*bestSig2; T = 100;
 
 logReg_Trn = {}
 logReg_Trn['w'], logReg_Trn['Acc'], logReg_Trn['LC'], logReg_Trn['Obj'], logReg_Trn['Losses'] = runLogReg_trn(dataTrn, bestLr, bestSig2, bestTau, T)
-print('    Accuracy: {:.3f}'.format(logReg_Trn['Acc']))
+print('\n    Accuracy: {:.3f}'.format(logReg_Trn['Acc']))
  
 plot_learning(logReg_Trn['LC'], logReg_Trn['Obj'], bestLr, bestC, bestTau, 'logReg_trnLearning.pdf')
 plot_loss(logReg_Trn['Losses'], bestLr, bestC, bestTau, 'logReg_trnLoss.pdf')

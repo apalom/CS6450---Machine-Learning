@@ -9,6 +9,7 @@ Created on Wed Nov 18 09:02:23 2020
 import time as time
 import pandas as pd
 import numpy as np
+np.random.seed(42)
 import os
 import os.path
 import itertools
@@ -61,6 +62,7 @@ dataCV, dataTrn, dataTst = load_data('data/csv-format/CVfolds/','data/csv-format
 
 #%% cross-validation data folds for ensemble learning
 
+# do I need this function? Just transform existing dataCV
 def ensembleCV(dataTrfm,dataTsfm,depths):
     
     n_folds = 5;
@@ -82,6 +84,7 @@ def ensembleCV(dataTrfm,dataTsfm,depths):
     
     return data
 
+depths = [1,2,4,8]
 dataEnsCV = ensembleCV(dataTrfm,depths)
 
 

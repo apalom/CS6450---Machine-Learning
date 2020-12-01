@@ -9,6 +9,7 @@ Created on Wed Nov 18 09:04:24 2020
 import time as time
 import pandas as pd
 import numpy as np
+np.random.seed(42)
 import os.path
 import itertools
 import matplotlib.pyplot as plt
@@ -23,7 +24,7 @@ def runSVM_CV(dataCV):
     Cs = [10**3, 10**2, 10**1, 10**0, 10**-1, 10**-2,]; #initial tradeoffs
     hps = list(itertools.product(lrs, Cs))
     best_perf = pd.DataFrame(columns=['Ep','lr', 'C', 'acc', 'obj']); 
-    T = 50;
+    T = 100;
     
     for f in dataCV:
         print('\n Fold -', f)
@@ -33,7 +34,8 @@ def runSVM_CV(dataCV):
         
         for lr, C in hps: # for learning rates and tradeoff combinations
             
-            tau = 1*C; # early stop threshold
+            es = 0.01;
+            tau = es*C; # early stop threshold
             # CV training
             w_best, _, lc, obj, losses = svm(data, lr, C, tau, T)
             # CV validation
@@ -45,10 +47,11 @@ def runSVM_CV(dataCV):
                 best_perf.loc[f] = [len(lc), lr, C, acc_Val, obj[-1]]
                 acc0 = acc_Val
             
-    print('\n -- Best Performance over CV Folds -- \n', best_perf)        
-        
+    print('\n -- Best Performance over CV Folds -- ')
+    print(best_perf)     
+    print('\nEarly stop:', es)          
     t_en = time.time()
-    print('\nRuntime (m):', np.round((t_en - t_st)/60,3))
+    print('Runtime (m):', np.round((t_en - t_st)/60,3))
     
     return best_perf
 
@@ -63,12 +66,13 @@ def runSVM_trn(dataTrn, lr, C, tau, T):
         
     return w_best, best_acc, lc, obj, losses
 
-bestLr = 0.0001; bestC = 1000; bestTau = 0.01*bestC; T = 100;
+bestLr = 0.0001; bestC = 1000; bestTau = 1*bestC; T = 100;
 svm_Trn = {}
 svm_Trn['w'], svm_Trn['Acc'], svm_Trn['LC'], svm_Trn['Obj'], svm_Trn['Losses'] = runSVM_trn(dataTrn, bestLr, bestC, bestTau, T)
      
-plot_learning(svm_Trn['LC'], svm_Trn['Obj'], bestLr, bestC, bestTau, 'svm_trnLearning1.pdf')
-plot_loss(svm_Trn['Losses'], bestLr, bestC, bestTau, 'svm_trnLoss1.pdf')
+plot_learning(svm_Trn['LC'], svm_Trn['Obj'], bestLr, bestC, bestTau, 'svm_trnLearning.pdf')
+plot_loss(svm_Trn['Losses'], bestLr, bestC, bestTau, 'svm_trnLoss.pdf')
+
 #%% test with best weight vector
 
 def runSVM_test(dataTst, w):

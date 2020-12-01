@@ -15,7 +15,7 @@ from results import *
 
 def logReg(data, g0, sig2, tau, T):
 
-    print('Logistic Regression Model')    
+    print('\nLogistic Regression Model')    
     print('[-- HP: lr {} + sig2 {} --]'.format(g0,sig2))
     data_np = data.to_numpy() # split data
     y = data_np[:,0]
@@ -24,12 +24,12 @@ def logReg(data, g0, sig2, tau, T):
     
     w = np.zeros(X.shape[1]); # initialize weights with bias
     acc0 = 0; # initialize accuracy baseline    
-    up = 0; # initialize update counters
+
     idx = np.arange(X.shape[0]); # index for stepping through data
     gt = g0; # learning rate
     lc = np.zeros((T)); # learning curve
     obj = np.zeros((T+1)); # initialize objective function curve
-    obj[0] = 10**5; # intial objective value to dummy high value
+    obj[0] = 100; # intial objective value to dummy high value
     losses = np.zeros((T)); # record loss progression over epochs
         
     for ep in range(T):
@@ -40,24 +40,23 @@ def logReg(data, g0, sig2, tau, T):
         
             # update weights
             w = w - gt*((-yi*xi)*sigmoid(-yi*np.dot(w.T,xi)) + np.divide(2*w,sig2))   
-            
-        # logReg objective function    
-        obj[ep+1] = np.log(1+np.exp(-yi*np.dot(w.T,xi))) + np.divide(np.dot(w.T,w),sig2)
-
-        #make label predictions & return training accuracy                
-        epAcc = accuracy(X,y,w)         
+                
+        # evaluate epoch accuracy, objective, loss
+        epAcc, obj[ep+1], losses[ep] = evalEp_LogReg(X,y,w,sig2)
         lc[ep] = epAcc #learning curve
-            
+                    
         # update results if accuracy improves
         if epAcc > acc0: 
             w_best = w; 
             acc0 = epAcc;
-            
-        print('-> {:.4f}'.format(epAcc), end=" ")      
+            better = True;
         
-        # calculat epoch loss
-        losses[ep] = lossLogReg(X,y,w)
-        
+        # print statement
+        if better:
+            print('-> {:.4f}'.format(epAcc), end=" ")      
+        else: print('.', end=" ")      
+        better = False;    
+                
         # early stop condition on change in objective over epochs
         if np.abs(obj[ep+1] - obj[ep]) < tau:
             print('\n    Early stop - epoch {}'.format(ep))
@@ -74,12 +73,33 @@ def logReg(data, g0, sig2, tau, T):
 def sigmoid(z):
     return 1/(1+np.exp(-z))
 
-def lossLogReg(X,y,w):
+#%% make prediction / calculate error
+
+def evalEp_LogReg(X,y,w,sig2):
     
-    L = 0
-    for i in range(len(X)):
+    yi_p = []; acc_cnt = 0;
+    # SVM regularizer term
+    regularizer = np.divide(np.dot(w.T, w),sig2);  
+    
+    loss = 0; obj = 0; # initialize loss/obj
+    for i in range(X.shape[0]):
         yi = y[i]; xi = X[i];    
-        # Logreg loss
-        L += np.log(1 + np.exp(-yi * np.dot(w.T,xi)))
+        wTdotxi = np.dot(w.T,xi)
+        # Log-loss over sample
+        loss += np.log(1 + np.exp(-yi*wTdotxi))
+        
+        # create predicted label
+        if wTdotxi >= 0: 
+            yi_p.append(1) # true label
+        else: yi_p.append(-1) # false label #NOTE check label true/false [1,0] or [1,-1]
     
-    return L
+        # count correct labels
+        if yi_p[-1] == yi:
+            acc_cnt += 1; 
+    
+    # calculate accuracy       
+    acc = acc_cnt/len(X)                 
+    # calculate objective
+    obj = regularizer + loss 
+    
+    return acc, obj, loss

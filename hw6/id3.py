@@ -105,7 +105,7 @@ def id3(df, df0, attributes, depth, parent=None):
         bestAtt = attGain[0][0]
                 
         # add node for best attribute
-        print('    Add node->',bestAtt)
+        #print('    Add node->',bestAtt)
         tree = {bestAtt:{}}
         depth += 1;
         if depth >= maxDepth:           
@@ -126,7 +126,7 @@ def id3(df, df0, attributes, depth, parent=None):
 
 # add end leafs (labels) to terminated branches based on most common label
 def endLeaf(tree):
-    print('    </> add leaves')
+    #print('    </> add leaves')
     for k,v in tree.items():                             
         # if empty
         if not bool(v):
@@ -142,6 +142,8 @@ def endLeaf(tree):
         
     return tree
 
+
+#%% use training set to build decision trees
 trees = {}      
 depths = [1,2,4,8]
 t_st = time.time()
@@ -153,13 +155,16 @@ for maxDepth in depths:
     for i in np.arange(200):
         df = dataTrn.sample(int(0.1*len(dataTrn)), replace=True)
         
-        print('>> Tree:', i)
+        #print('>> Tree:', i)
         attributes = list(df.columns[1:])
         # input id3(df, df0, attributes, depth, maxDepth, parent=None):
         prunedTree = id3(df,df,attributes,0,maxDepth)
         trees[maxDepth][i] = endLeaf(prunedTree) #add end leaf labels to tree
         
-        print(trees[maxDepth][i])
+        #print(trees[maxDepth][i])
+        
+        if np.mod(i,10) == 0:
+            print('.', end=" ") 
         
 t_en = time.time()
 print('\nRuntime (m):', np.round((t_en - t_st)/60,3))
@@ -211,19 +216,19 @@ def transformData(data, depths):
                 dataTrfm[maxDepth][i,t] = predDT(xi, dt)   
                 
         # bias weight will be added at SVM algorithm
-        #dataTrfm[maxDepth][:,-1] = np.ones((len(dataTrfm[maxDepth][:,-1])))
         dataTrfm[maxDepth] = np.insert(dataTrfm[maxDepth], 0, y, axis=1)
+        
     return dataTrfm
 
-print('\nEnsemble Training Data')
-dataTrfm_trn = transformData(dataTrn, depths)
-print('\nEnsemble Testing Data')
-dataTrfm_tst = transformData(dataTst, depths)
+print('\n\nEnsemble Training Data')
+dataTrfm_trn = transformData(dataTrn, trees, depths)
+print('\n\nEnsemble Testing Data')
+dataTrfm_tst = transformData(dataTst, trees, depths)
 print('\nEnsemble Cross-Validation Data')
 dataTrfm_CV = {}
 for fold in dataCV:
     print('\n   Fold:', fold)
-    dataTrfm_CV[fold] = transformData(dataCV[fold], depths)
+    dataTrfm_CV[fold] = transformData(dataCV[fold], trees, depths)
 
 #%% output transformed data
 

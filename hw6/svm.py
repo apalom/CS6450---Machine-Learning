@@ -22,7 +22,6 @@ def svm(data, g0, C, tau, T):
     
     w = np.zeros(X.shape[1]); # initialize weights with bias
     acc0 = 0; # initialize accuracy baseline    
-    up = 0; # initialize update counters
     idx = np.arange(X.shape[0]); # index for stepping through data
     
     lc = np.zeros((T)); # learning curve
@@ -35,20 +34,17 @@ def svm(data, g0, C, tau, T):
         gt = g0/(1+ep); 
         #print('Objective:',obj[ep])
     
+        # update weights
         for i in idx:
             yi = y[i]; xi = X[i];    
         
             if yi*(np.dot(w.T, xi)) <= 1:
-                w = (1-gt)*w + gt*C*yi*xi;  
-                up+=1                                              
+                w = (1-gt)*w + gt*C*yi*xi;                                          
             else: 
                 w = (1-gt)*w;                 
-            
-        # SVM objective function
-        obj[ep+1] = 0.5 * np.dot(w.T, w) + C * np.max((0, (1 - yi * np.dot(w.T, xi))))
         
-        #make label predictions & return training accuracy                
-        epAcc = accuracy(X,y,w)         
+        # evaluate epoch accuracy, objective, loss
+        epAcc, obj[ep+1], losses[ep] = evalEp_SVM(X,y,w,C)
         lc[ep] = epAcc #learning curve
             
         # update results if accuracy improves
@@ -56,10 +52,7 @@ def svm(data, g0, C, tau, T):
             w_best = w; 
             acc0 = epAcc;
             
-        print('-> {:.4f}'.format(epAcc), end=" ")      
-        
-        # calculat epoch loss
-        losses[ep] = lossSVM(X,y,w)
+        print('-> {:.4f}'.format(epAcc), end=" ")             
         
         # early stop condition on change in objective over epochs
         if np.abs(obj[ep+1] - obj[ep]) < tau:
@@ -76,39 +69,33 @@ def svm(data, g0, C, tau, T):
 
 #%% make prediction / calculate error
 
-def accuracy(X,y,w):
+def evalEp_SVM(X,y,w,C):
     
     yi_p = []; acc_cnt = 0;
-    
+    # SVM regularizer term
+    regularizer = 0.5*np.dot(w.T, w);  
+    loss = 0; obj = 0; # initialize loss/obj
     for i in range(X.shape[0]):
         yi = y[i]; xi = X[i];    
+        wTdotxi = np.dot(w.T,xi)
+        # SVM loss over sample
+        loss += max(0.0, 1.0 - yi*wTdotxi )
         
-        if np.dot(w.T,xi) >= 0: # create predicted label
+        # create predicted label
+        if wTdotxi >= 0: 
             yi_p.append(1) # true label
         else: yi_p.append(-1) # false label #NOTE check label true/false [1,0] or [1,-1]
     
+        # count correct labels
         if yi_p[-1] == yi:
-            acc_cnt += 1; # count correct labels
-           
+            acc_cnt += 1; 
+    
+    # calculate accuracy       
     acc = acc_cnt/len(X)                 
+    # calculate objective
+    obj = regularizer + C * loss 
     
-    return acc
-
-def lossSVM(X,y,w):
-    
-    L = 0
-    for i in range(len(X)):
-        yi = y[i]; xi = X[i];    
-        # SVM loss
-        L += np.max((0,1-yi*np.dot(w.T,xi)))
-    
-    return L
-
-
-
-
-
-
+    return acc, obj, loss
 
 
 

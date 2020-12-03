@@ -116,6 +116,7 @@ def id3(data, maxDepth, depth):
 def predictLbl(sample, tree):
     # root feature for splitting   
     feature = list(tree.keys())[0];
+    # shift correction after removal of label
     value = sample[feature-1];
         
     result = tree[feature][value]

@@ -13,6 +13,7 @@ np.random.seed(42)
 import os.path
 import itertools
 import matplotlib.pyplot as plt
+
 from svm import *
 from results import *
 
@@ -55,7 +56,7 @@ def runSVM_CV(dataCV, es):
     return best_perf, t_run
 
 # repeat cross validation
-reps = {}; repeats = 3; runtimes = {}; 
+reps = {}; repeats = 1; runtimes = {}; 
 es = 'None'; avgObj = 0
 for r in range(repeats):
     # input dataCV and early stopping factor

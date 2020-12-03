@@ -21,7 +21,7 @@ from results import *
 
 #%% load cross-validation and training data
 
-def loaDdata(path_to_CV, path_to_Trn, path_to_Tst):
+def loadData(path_to_CV, path_to_Trn, path_to_Tst):
 
     n_folds = len([f for f in os.listdir(path_to_CV)if os.path.isfile(os.path.join(path_to_CV, f))])
     data = {}; X = {}; y = {};
@@ -58,7 +58,7 @@ def loaDdata(path_to_CV, path_to_Trn, path_to_Tst):
     
     return data, dataTrain, dataTest
 
-dataCV, dataTrn, dataTst = load_data('data/csv-format/CVfolds/','data/csv-format/train.csv','data/csv-format/test.csv')
+dataCV, dataTrn, dataTst = loadData('data/csv-format/CVfolds/','data/csv-format/train.csv','data/csv-format/test.csv')
 
 #%% cross-validation data folds for ensemble learning
 

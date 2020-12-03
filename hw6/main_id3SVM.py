@@ -41,7 +41,6 @@ t_RunTrees = np.round((t_en - t_st)/60,3)
 print('\nRuntime (m):', t_RunTrees)
    
 #% transformer data
-
 print('\n\nEnsemble Training Data')
 dataTrfm_trn = transformData(dataTrn, trees, depths)
 print('\n\nEnsemble Testing Data')

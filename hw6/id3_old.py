@@ -203,6 +203,32 @@ def transformData(data, trees, depths):
         
     return dataTrfm
 
+
+#%% 
+# add end leafs (labels) to terminated branches based on most common label
+def endLeaf2(tree, data):
+    #print('    </> add leaves')
+    print('tree', tree)
+    for k,v in tree.items():           
+        print('  k',k)
+        print('  v',v)
+        # if empty
+        #if not bool(v):
+        if isinstance(v,dict) and not bool (v[list(v.keys())[0]]):
+            tree[k] = likeliestLabel(data)
+        
+            print('Label',tree)
+                        
+        else:             
+            if isinstance(tree[k],dict):
+                endLeaf(tree[k], data)
+            else: pass
+        
+    return tree
+
+dt = endLeaf(dt,data.values)
+print('\n', dt)
+
 #%%
 # print('\n\nEnsemble Training Data')
 # dataTrfm_trn = transformData(dataTrn, trees, depths)

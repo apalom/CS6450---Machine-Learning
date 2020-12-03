@@ -5,9 +5,11 @@ Created on Wed Dec  2 11:56:50 2020
 @author: Alex
 """
 
+import numpy as np
+
 # check if data is pure or trivial
 def checkSame(data):
-    
+        
     lblsIn = np.unique(data[:,0]) # column 0 is label column
 
     if len(lblsIn) == 1:
@@ -80,13 +82,16 @@ def bestRoot(data):
 def id3(data, maxDepth, depth):         
     
     # base case
-    # if all examples have the same label return a single node tree        
+    # if all examples have the same label return a single node tree  
+    # if dt depth is greater than max depth      
     if checkSame(data) or depth >= maxDepth:
         label = likeliestLabel(data)       
         return label
     
     # grow subtree
     else:    
+        
+        depth += 1;
         
         # calculate best root for splitting
         splitFeature, splitVal, _ = bestRoot(data)     
@@ -96,11 +101,7 @@ def id3(data, maxDepth, depth):
         # create sub-tree
         root = splitFeature       
         tree = {root:{}}
-        
-        # decision tree stump condition
-        depth += 1;
-        print(depth)
-        
+                
         # recurse down left and right branch (data subsets)        
         branchLeft = id3(dataLeft, maxDepth, depth)  
         branchRight = id3(dataRight, maxDepth, depth)
@@ -110,15 +111,12 @@ def id3(data, maxDepth, depth):
         
         return tree
 
-dt = id3(data.values,1,0)
-print(dt)
-
 #%%
 
 def predictLbl(sample, tree):
     # root feature for splitting   
     feature = list(tree.keys())[0];
-    value = sample[feature];
+    value = sample[feature-1];
         
     result = tree[feature][value]
     
@@ -127,8 +125,7 @@ def predictLbl(sample, tree):
         return predictLbl(sample,result)
 
     else: # else return the label
-        return result
-        
+        return result    
 
 def transformData(data, trees, depths):
     # now transform data based on 200 trees
@@ -142,7 +139,7 @@ def transformData(data, trees, depths):
     for maxDepth in depths:
         print('\n++ Tree Depth: ', maxDepth)
         treesDeep = trees[maxDepth]
-        dataTrfm[maxDepth] = np.zeros((X.shape[0],200)) # initialize
+        dataTrfm[maxDepth] = np.zeros((X.shape[0],len(trees[1]))) # initialize
         
         # over all data samples
         for i in range(X.shape[0]):
@@ -152,37 +149,12 @@ def transformData(data, trees, depths):
             xi = X[i]       
             
             # over all trees
-            for t in range(0,200):                
+            for t in range(0,len(trees[1])):                
                 dt = treesDeep[t]            
-                dataTrfm[maxDepth][i,t] = predDT_root(xi, dt)   
+                dataTrfm[maxDepth][i,t] = predictLbl(xi, dt)   
                                     
         # bias weight will be added at SVM algorithm
         # insert y labels as column 1 of dataTrfm
         dataTrfm[maxDepth] = np.insert(dataTrfm[maxDepth], 0, y, axis=1)
         
     return dataTrfm
-
-#%% 
-# add end leafs (labels) to terminated branches based on most common label
-def endLeaf(tree, data):
-    #print('    </> add leaves')
-    print('tree', tree)
-    for k,v in tree.items():           
-        print('  k',k)
-        print('  v',v)
-        # if empty
-        #if not bool(v):
-        if isinstance(v,dict) and not bool (v[list(v.keys())[0]]):
-            tree[k] = likeliestLabel(data)
-        
-            print('Label',tree)
-                        
-        else:             
-            if isinstance(tree[k],dict):
-                endLeaf(tree[k], data)
-            else: pass
-        
-    return tree
-
-dt = endLeaf(dt,data.values)
-print('\n', dt)

@@ -21,7 +21,7 @@ from results import *
 
 #%% load cross-validation and training data
 
-def load_data(path_to_CV, path_to_Trn, path_to_Tst):
+def loaDdata(path_to_CV, path_to_Trn, path_to_Tst):
 
     n_folds = len([f for f in os.listdir(path_to_CV)if os.path.isfile(os.path.join(path_to_CV, f))])
     data = {}; X = {}; y = {};

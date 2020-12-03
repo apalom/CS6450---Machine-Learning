@@ -24,7 +24,7 @@ def runLogReg_CV(dataCV, es):
     sig2s = [10**-1, 10**0, 10**1, 10**2, 10**3, 10**4,]; #initial tradeoffs
     hps = list(itertools.product(lrs, sig2s))
     best_perf = pd.DataFrame(columns=['Ep','lr', 'sig2', 'acc', 'obj']); 
-    T = 50;
+    T = 10;
     
     for f in dataCV:
         print('\n Fold -', f)
@@ -38,9 +38,9 @@ def runLogReg_CV(dataCV, es):
         
         for lr, sig2 in hps: # for learning rates and tradeoff combinations
             
-            tau = es*sig2; # early stop threshold
+            # No early stop threshold for CV: es = 'None'
             # CV training
-            w_best, _, lc, obj, losses = logReg(data, lr, sig2, tau, T)
+            w_best, _, lc, obj, losses = logReg(data, lr, sig2, es, T)
             # CV validation 
             acc_Val = accuracy(X_val, y_val, w_best) # accuracy(X,y,w):
         
@@ -57,12 +57,17 @@ def runLogReg_CV(dataCV, es):
     
     return best_perf, t_run
 
-reps = {}; runtimes = {}; es = 0.000000001;
-for r in range(3):
+reps = {}; repeats = 3; runtimes = {}; 
+es = 'None'; avgObj = 0
+for r in range(repeats):
     # input dataCV and early stopping factor
     logReg_bestHP, t_run = runLogReg_CV(dataCV, es);
+    avgObj += logReg_bestHP.obj.mean();
     reps[r] = logReg_bestHP;
     runtimes[r] = t_run    
+
+# average cross validation objective value for early stopping definition
+avgObj = int(avgObj/repeats)
 
 #%% train with best HP
 
@@ -72,7 +77,9 @@ def runLogReg_trn(dataTrn, lr, sig2, tau, T):
         
     return w_best, best_acc, lc, obj, losses
 
-bestLr = 0.1; bestSig2 = 1000; bestTau = es*bestSig2; T = 100;
+bestLr = 0.1; bestSig2 = 10000; T = 100;
+# early stop condition = 1% of avg. CV objective
+bestTau = 0.01*730#avgObj;
 
 logReg_Trn = {}
 logReg_Trn['w'], logReg_Trn['Acc'], logReg_Trn['LC'], logReg_Trn['Obj'], logReg_Trn['Losses'] = runLogReg_trn(dataTrn, bestLr, bestSig2, bestTau, T)

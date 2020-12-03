@@ -51,19 +51,25 @@ def svm(data, g0, C, tau, T):
         if epAcc > acc0: 
             w_best = w; 
             acc0 = epAcc;
-            
-        print('-> {:.4f}'.format(epAcc), end=" ")             
-        
+            better = True;        
+
+        # print statement
+        if better:
+            print('-> {:.4f}'.format(epAcc), end=" ")      
+        else: print('.', end=" ")      
+        better = False;    
+           
+        if tau != 'None': # do not evaluate for early stop during cross-validation
         # early stop condition on change in objective over epochs
-        if np.abs(obj[ep+1] - obj[ep]) < tau:
-            print('\n    Early stop - epoch {}'.format(ep))
-            print('    Objective values {:.3f} -> {:.3f}'.format(obj[ep+1], obj[ep]))            
-            
-            lc = lc[0:ep+1]
-            obj = obj[0:ep+1+1]
-            losses = losses[0:ep+1]
-            
-            break                
+            if ep > 2 and np.abs(obj[ep+1] - obj[ep]) < tau and np.abs(obj[ep] - obj[ep-1]) < tau:
+                print('\n    Early stop - epoch {}'.format(ep))
+                print('    Objective values {:.3f} -> {:.3f}'.format(obj[ep], obj[ep+1]))            
+                
+                lc = lc[0:ep+1]
+                obj = obj[0:ep+1+1]
+                losses = losses[0:ep+1]
+                
+                break                    
     
     return w_best, acc0, lc, obj, losses
 

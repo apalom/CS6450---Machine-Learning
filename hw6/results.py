@@ -49,7 +49,7 @@ def plot_learning(lc, obj, lr, C, tau, figName):
     obj[0] = 0#obj[1]
     ax2.plot(obj, c='grey', linestyle='--', label='Obj')
     
-    ax.set_title('Results lr {:.3f}, C {}, tau {}'.format(lr, C, tau))
+    ax.set_title('Results lr {:.4f}, C {}, tau {}'.format(lr, C, tau))
     ax.set_xticks(np.arange(0,len(lc),2))
     ax.set_xlabel('Epochs')
     ax.set_ylabel('Accuracy')
@@ -78,7 +78,7 @@ def plot_loss(loss, lr, C, tau, figName):
     
     ax.plot(loss, c='r')
         
-    ax.set_title('Results lr {:.3f}, C {}, tau {}'.format(lr, C, tau))
+    ax.set_title('Results lr {:.4f}, C {}, tau {}'.format(lr, C, tau))
     ax.set_xticks(np.arange(0,len(loss)+1,2))
     ax.set_xlabel('Epochs')
     ax.set_ylabel('Cummulative Loss')

@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from svm import *
 from results import *
 
-def runSVM_CV(dataCV):
+def runSVM_CV(dataCV, es):
     # Using current time 
     t_st = time.time()
     
@@ -24,7 +24,7 @@ def runSVM_CV(dataCV):
     Cs = [10**3, 10**2, 10**1, 10**0, 10**-1, 10**-2,]; #initial tradeoffs
     hps = list(itertools.product(lrs, Cs))
     best_perf = pd.DataFrame(columns=['Ep','lr', 'C', 'acc', 'obj']); 
-    T = 100;
+    T = 10;
     
     for f in dataCV:
         print('\n Fold -', f)
@@ -34,10 +34,8 @@ def runSVM_CV(dataCV):
         
         for lr, C in hps: # for learning rates and tradeoff combinations
             
-            es = 0.01;
-            tau = es*C; # early stop threshold
             # CV training
-            w_best, _, lc, obj, losses = svm(data, lr, C, tau, T)
+            w_best, _, lc, obj, losses = svm(data, lr, C, es, T)
             # CV validation
             X = dataVal[:,1:]; X = np.hstack((X, np.ones((X.shape[0],1)))); # add bias
             y = dataVal[:,0];             
@@ -51,12 +49,23 @@ def runSVM_CV(dataCV):
     print(best_perf)     
     print('\nEarly stop:', es)          
     t_en = time.time()
-    print('Runtime (m):', np.round((t_en - t_st)/60,3))
+    t_run = np.round((t_en - t_st)/60,3)
+    print('\nRuntime (m):', t_run)
     
-    return best_perf
+    return best_perf, t_run
 
-#svmid3_bestHP = runSVM_CV(dataCV);
-svm_bestHP = runSVM_CV(dataCV);
+# repeat cross validation
+reps = {}; repeats = 3; runtimes = {}; 
+es = 'None'; avgObj = 0
+for r in range(repeats):
+    # input dataCV and early stopping factor
+    svm_bestHP, t_run = runSVM_CV(dataCV, es);
+    avgObj += svm_bestHP.obj.mean();
+    reps[r] = svm_bestHP;
+    runtimes[r] = t_run    
+
+# average cross validation objective value for early stopping definition
+avgObj = int(avgObj/repeats)
 
 #%% train with best HP
 
@@ -66,7 +75,7 @@ def runSVM_trn(dataTrn, lr, C, tau, T):
         
     return w_best, best_acc, lc, obj, losses
 
-bestLr = 0.0001; bestC = 1000; bestTau = 1*bestC; T = 100;
+bestLr = 0.0001; bestC = 1000; bestTau = int(0.01*avgObj); T = 100;
 svm_Trn = {}
 svm_Trn['w'], svm_Trn['Acc'], svm_Trn['LC'], svm_Trn['Obj'], svm_Trn['Losses'] = runSVM_trn(dataTrn, bestLr, bestC, bestTau, T)
      

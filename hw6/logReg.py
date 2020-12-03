@@ -26,7 +26,7 @@ def logReg(data, g0, sig2, tau, T):
     acc0 = 0; # initialize accuracy baseline    
 
     idx = np.arange(X.shape[0]); # index for stepping through data
-    gt = g0; # learning rate
+
     lc = np.zeros((T)); # learning curve
     obj = np.zeros((T+1)); # initialize objective function curve
     obj[0] = 100; # intial objective value to dummy high value
@@ -34,12 +34,13 @@ def logReg(data, g0, sig2, tau, T):
         
     for ep in range(T):
         np.random.shuffle(idx) # shuffle index       
- 
+        gt = g0/(1+ep) # update learning rate
+    
         for i in idx:
             yi = y[i]; xi = X[i];    
         
             # update weights
-            w = w - gt*((-yi*xi)*sigmoid(-yi*np.dot(w.T,xi)) + np.divide(2*w,sig2))   
+            w -= gt*((-yi*xi)*sigmoid(-yi*np.dot(w.T,xi)) + np.divide(2*w,sig2))   
                 
         # evaluate epoch accuracy, objective, loss
         epAcc, obj[ep+1], losses[ep] = evalEp_LogReg(X,y,w,sig2)
@@ -56,17 +57,18 @@ def logReg(data, g0, sig2, tau, T):
             print('-> {:.4f}'.format(epAcc), end=" ")      
         else: print('.', end=" ")      
         better = False;    
-                
+           
+        if tau != 'None': # do not evaluate for early stop during cross-validation
         # early stop condition on change in objective over epochs
-        if np.abs(obj[ep+1] - obj[ep]) < tau:
-            print('\n    Early stop - epoch {}'.format(ep))
-            print('    Objective values {:.3f} -> {:.3f}'.format(obj[ep], obj[ep+1]))            
-            
-            lc = lc[0:ep+1]
-            obj = obj[0:ep+1+1]
-            losses = losses[0:ep+1]
-            
-            break                
+            if ep > 2 and np.abs(obj[ep+1] - obj[ep]) < tau and np.abs(obj[ep] - obj[ep-1]) < tau:
+                print('\n    Early stop - epoch {}'.format(ep))
+                print('    Objective values {:.3f} -> {:.3f}'.format(obj[ep], obj[ep+1]))            
+                
+                lc = lc[0:ep+1]
+                obj = obj[0:ep+1+1]
+                losses = losses[0:ep+1]
+                
+                break                
     
     return w_best, acc0, lc, obj, losses
 
